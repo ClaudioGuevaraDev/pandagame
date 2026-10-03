@@ -34,6 +34,47 @@ for (const level of LEVELS) {
   });
 }
 
+// Solapes con el tutorial: ningún reto debe resolverse copiando un ejemplo.
+const squash = (t: string) => t.replace(/\s+/g, "");
+const tutorialBlocks = LESSONS.flatMap((l) =>
+  l.blocks.flatMap((b, i) => {
+    const codes =
+      b.type === "code"
+        ? [b.code]
+        : b.type === "markdown"
+          ? [...b.content.matchAll(/```[a-z]*\n([\s\S]*?)```/g)].map((m) => m[1])
+          : [];
+    return codes.map((code) => ({ where: `${l.slug}#${i}`, code, squashed: squash(code) }));
+  }),
+);
+/** Valores literales de cadena (no claves de diccionario ni nombres genéricos) de un código Python. */
+const stringValues = (code: string) =>
+  new Set(
+    [...code.matchAll(/"([^"\\\n]*)"(\s*:)?|'([^'\\\n]*)'(\s*:)?/g)]
+      .filter((m) => !m[2] && !m[4]) // descarta claves: "col": ...
+      .map((m) => m[1] ?? m[3])
+      .filter((v) => v.length >= 2 && !/^[a-z_]+$/.test(v)), // descarta nombres de columna/parámetros
+  );
+for (const c of ALL_CHALLENGES) {
+  if (filter && !c.id.startsWith(filter)) continue;
+  for (const raw of c.solution.split("\n")) {
+    const line = raw.replace(/#.*$/, "").trim().replace(/^return\s+/, "");
+    if (/^(import|from|def)\b/.test(line) || /^resolver\(/.test(line)) continue;
+    const sq = squash(line);
+    // Solo líneas con datos propios (un literal de cadena) y de cierto tamaño:
+    // expresiones genéricas como .reset_index(drop=True) no cuentan como copia.
+    if (sq.length < 26 || !/["']/.test(line)) continue;
+    const hit = tutorialBlocks.find((b) => b.squashed.includes(sq));
+    if (hit) problems.push(`${c.id}: la línea de la solución «${line}» aparece en el tutorial (${hit.where})`);
+  }
+  const values = stringValues(c.setup);
+  for (const b of tutorialBlocks) {
+    const shared = [...stringValues(b.code)].filter((v) => values.has(v));
+    if (shared.length >= 3)
+      problems.push(`${c.id}: los datos comparten ${shared.length} valores con el tutorial (${b.where}): ${shared.slice(0, 5).join(", ")}`);
+  }
+}
+
 const py = await loadPyodide();
 await py.loadPackage(["pandas"]);
 py.runPython(HARNESS);

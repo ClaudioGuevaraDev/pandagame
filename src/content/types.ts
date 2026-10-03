@@ -48,7 +48,9 @@ export type Level = {
 
 export type LessonBlock =
   | { type: "markdown"; content: string }
-  | { type: "code"; code: string; title?: string };
+  | { type: "code"; code: string; title?: string }
+  /** Guía visual de los botones de un reto (componente ChallengeGuide). */
+  | { type: "guide" };
 
 export type Lesson = {
   slug: string;

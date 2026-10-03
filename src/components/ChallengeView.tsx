@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
+  CircleHelp,
   CircleDashed,
   FlaskConical,
   KeyRound,
@@ -237,8 +238,18 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
           </h1>
         </div>
         <div className="ml-auto hidden xl:block">{hydrated && <MiniMap activeId={challengeId} />}</div>
-        <div className="ml-auto hidden sm:block xl:ml-5">
-          <PyodideStatus />
+        <div className="ml-auto flex items-center gap-3 xl:ml-5">
+          <Link
+            href="/tutorial/como-funcionan-los-retos"
+            className="btn-ghost px-2 py-1 text-xs"
+            title="Cómo funcionan los retos"
+          >
+            <CircleHelp className="h-4 w-4" />
+            <span className="sr-only lg:not-sr-only">¿Cómo funciona?</span>
+          </Link>
+          <span className="hidden sm:block">
+            <PyodideStatus />
+          </span>
         </div>
       </div>
 

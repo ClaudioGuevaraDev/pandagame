@@ -45,6 +45,11 @@ export const LEVEL_THEME = {
 
 export const KANJI_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
 
+/** Numeral kanji de un módulo del tutorial (0 → 〇, la introducción). */
+export function moduleNumeral(n: number): string {
+  return n === 0 ? "〇" : (KANJI_NUMERALS[n - 1] ?? String(n));
+}
+
 /** Tema oscuro "piedra de tinta" del editor y de la vista previa del tutorial. */
 export const EDITOR_PALETTE = {
   bg: "#1d1b18",

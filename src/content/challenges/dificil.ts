@@ -3,62 +3,69 @@ import type { Challenge } from "../types.ts";
 // Funciones de referencia usadas por los tests (no se muestran al usuario).
 
 const ref1 = `def _ref(df):
-    t = df.pivot_table(index="reserva", columns="mes", values="kg", aggfunc="sum", fill_value=0)
-    t["total"] = t.sum(axis=1)
+    d = df.assign(ingreso=df["unidades"] * df["precio"])
+    t = d.pivot_table(index="tienda", columns="categoria", values="ingreso", aggfunc="sum", fill_value=0)
+    t = (t.div(t.sum(axis=1), axis=0) * 100).round(1)
     t.columns.name = None
-    return t.sort_values("total", ascending=False, kind="stable")`;
+    return t`;
 
 const ref2 = `def _ref(df):
-    meses = [c for c in df.columns if c != "panda"]
-    l = df.melt(id_vars="panda", var_name="mes", value_name="kg").dropna(subset=["kg"])
-    l["kg"] = l["kg"].astype(int)
-    l["_o"] = l["mes"].map({m: i for i, m in enumerate(meses)})
-    return l.sort_values(["panda", "_o"]).drop(columns="_o").reset_index(drop=True)`;
+    l = df.melt(id_vars="cria", var_name="_col", value_name="_v")
+    p = l["_col"].str.split("_", expand=True)
+    l["_m"] = p[0]
+    l["anio"] = p[1].astype(int)
+    t = l.pivot_table(index=["cria", "anio"], columns="_m", values="_v", aggfunc="first").reset_index()
+    t.columns.name = None
+    return t[["cria", "anio", "peso", "altura"]].sort_values(["cria", "anio"]).reset_index(drop=True)`;
 
 const ref3 = `def _ref(df):
-    s = df.groupby(["reserva", "año"])["nacimientos"].sum()
+    s = df.groupby(["clinica", "trimestre"])["consultas"].sum()
+    total = s.groupby(level="trimestre").transform("sum")
     return {
-        "serie": s,
-        "tabla": s.unstack("año", fill_value=0),
-        "chengdu": s.xs("Chengdu", level="reserva"),
+        "por_trimestre": s.swaplevel().sort_index(),
+        "t2": s.xs("T2", level="trimestre"),
+        "cuota": (s / total * 100).round(1),
+        "tabla": s.unstack("trimestre", fill_value=0),
     }`;
 
 const ref4 = `def _ref(df):
     d = df.copy()
-    media = d.groupby("reserva")["peso_kg"].transform("mean")
-    total = d.groupby("reserva")["peso_kg"].transform("sum")
-    d["peso_medio_reserva"] = media.round(2)
-    d["diferencia"] = (d["peso_kg"] - media).round(2)
-    d["pct_reserva"] = (d["peso_kg"] / total * 100).round(1)
-    return d[d["diferencia"] > 0]`;
+    d["peso_g"] = d["peso_g"].fillna(d.groupby("sala")["peso_g"].transform("median"))
+    g = d.groupby("sala")["peso_g"]
+    d["z_sala"] = ((d["peso_g"] - g.transform("mean")) / g.transform("std")).round(2)
+    d["puesto_sala"] = g.rank(method="min", ascending=False).astype(int)
+    return d`;
 
 const ref5 = `def _ref(df):
-    d = df.sort_values(["panda", "fecha"]).reset_index(drop=True)
-    g = d.groupby("panda")["kg"]
-    d["ayer"] = g.shift(1)
-    d["cambio"] = d["kg"] - d["ayer"]
-    d["media_3d"] = g.transform(lambda s: s.rolling(3).mean()).round(2)
+    d = df.sort_values(["cria", "dia"]).reset_index(drop=True)
+    g = d.groupby("cria")["pasos"]
+    d["var_pct"] = (g.pct_change() * 100).round(1)
+    d["max_3"] = g.transform(lambda s: s.rolling(3, min_periods=1).max())
+    sube = g.diff() > 0
+    bloque = (~sube).groupby(d["cria"]).cumsum()
+    d["racha"] = sube.astype(int).groupby([d["cria"], bloque]).cumsum()
     return d`;
 
 const ref6 = `def _ref(df):
-    r = df.set_index("fecha").sort_index()["kg"].resample("D")
-    out = pd.DataFrame({"total": r.sum(), "comidas": r.count()})
-    out["acumulado"] = out["total"].cumsum()
-    out.index.name = "fecha"
+    r = df.set_index("momento").sort_index()["personas"].resample("W")
+    out = pd.DataFrame({"visitantes": r.sum(), "grupos": r.count()})
+    out["cambio"] = out["visitantes"].diff()
+    out.index.name = "semana"
     return out`;
 
-const ref7 = `def _ref(df):
+const ref7 = `def _ref(df, n=3):
     d = df.copy()
-    d["rank_reserva"] = d.groupby("reserva")["puntos"].rank(method="dense", ascending=False).astype(int)
-    d = d[d["rank_reserva"] <= 2].sort_values(["reserva", "rank_reserva", "panda"]).reset_index(drop=True)
-    return d[["reserva", "panda", "puntos", "rank_reserva"]]`;
+    d["posicion"] = d.groupby("categoria")["segundos"].rank(method="min").astype(int)
+    d = d[d["posicion"] <= n].sort_values(["categoria", "posicion", "dorsal"]).reset_index(drop=True)
+    return d[["categoria", "posicion", "dorsal", "corredor", "segundos"]]`;
 
 const ref8 = `def _ref(df):
     d = df.copy()
-    d["etapa"] = pd.cut(d["edad"], bins=[0, 2, 5, 15, float("inf")], right=False,
-                        labels=["cría", "joven", "adulto", "anciano"])
-    d["cuartil_peso"] = pd.qcut(d["peso_kg"], 4, labels=["Q1", "Q2", "Q3", "Q4"])
-    return {"datos": d, "tabla": pd.crosstab(d["etapa"], d["reserva"])}
+    d["rango"] = pd.cut(d["temperatura"], bins=[35, 37, 38.5, 40, 43], right=False,
+                        labels=["baja", "normal", "alta", "fiebre"])
+    d["talla"] = pd.qcut(d["peso_kg"], 3, labels=["ligero", "medio", "pesado"])
+    tabla = (pd.crosstab(d["turno"], d["rango"], normalize="index") * 100).round(1)
+    return {"datos": d, "tabla": tabla}
 
 def _norm_tabla(t):
     t = t.copy()
@@ -68,7 +75,7 @@ def _norm_tabla(t):
 
 def _norm_datos(d):
     d = d.copy()
-    for c in ["etapa", "cuartil_peso"]:
+    for c in ["rango", "talla"]:
         d[c] = d[c].astype(str)
     return d`;
 
@@ -89,7 +96,7 @@ const ref10 = `def _ref(df, reservas):
     d = d.dropna(subset=["kg"])
     d["fecha"] = pd.to_datetime(d["fecha"])
     d = d.drop_duplicates()
-    d = d.merge(reservas, on="reserva_id", how="left")
+    d = d.merge(reservas, on="id_reserva", how="left")
     d["reserva"] = d["reserva"].fillna("Desconocida")
     out = (
         d.groupby(["reserva", "panda"], as_index=False)
@@ -106,70 +113,77 @@ export const dificil: Challenge[] = [
     title: "Pivote",
     icon: "Table2",
     topic: "pivot_table",
-    description: `Tienes \`df\` con los kilos de bambú entregados a cada reserva, en formato **largo**: una fila por entrega (\`reserva\`, \`mes\`, \`kg\`). Puede haber varias entregas para la misma reserva y mes.
+    description: `La tienda de recuerdos del santuario tiene tres puestos (\`tienda\`) que venden peluches, tazas y postales. Cada fila de \`df\` es una venta con sus \`unidades\` y el \`precio\` unitario.
 
-Completa \`resolver(df)\` para que devuelva una **tabla dinámica** donde:
+La directora no quiere saber cuánto se vendió, sino **de qué vive cada puesto**: qué **porcentaje de los ingresos** de cada tienda aporta cada categoría.
 
-- El **índice** son las reservas (con nombre \`"reserva"\`).
-- Las **columnas** son los meses (en el orden por defecto de \`pivot_table\`, alfabético), con la **suma** de kg.
-- Las combinaciones sin datos valen **0** (no \`NaN\`).
-- Se añade una última columna \`"total"\` con la suma de cada fila.
-- El nombre del eje de columnas debe quedar vacío (\`tabla.columns.name = None\`).
-- Las filas se ordenan por \`total\` de **mayor a menor**.`,
+Completa \`resolver(df)\` para que devuelva una tabla donde:
+
+- El **índice** es \`tienda\` y hay **una columna por categoría** (en orden alfabético, como las ordena \`pivot_table\`).
+- Cada celda es el porcentaje de los ingresos (\`unidades * precio\`) de esa tienda que viene de esa categoría, **redondeado a 1 decimal**. Cada fila suma ~100.
+- Si una tienda no vendió una categoría, el porcentaje es \`0\`.
+- El nombre del eje de columnas debe quedar vacío (\`tabla.columns.name = None\`).`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "reserva": ["Chengdu", "Wolong", "Chengdu", "Ya'an", "Wolong", "Chengdu", "Ya'an", "Wolong"],
-    "mes": ["ene", "ene", "feb", "feb", "feb", "ene", "mar", "mar"],
-    "kg": [120, 90, 100, 60, 75, 30, 40, 85],
+    "tienda": ["Entrada", "Mirador", "Entrada", "Cafetería", "Mirador",
+               "Entrada", "Cafetería", "Mirador", "Cafetería"],
+    "categoria": ["peluches", "tazas", "tazas", "peluches", "peluches",
+                  "postales", "tazas", "postales", "postales"],
+    "unidades": [10, 4, 6, 3, 8, 20, 5, 15, 10],
+    "precio": [12.0, 8.0, 8.0, 12.0, 12.0, 1.5, 8.0, 1.5, 1.5],
 })`,
     starterCode: `def resolver(df):
-    tabla = df  # usa pivot_table
-    return tabla
+    return df.pivot_table(index="tienda", columns="categoria", values="unidades", aggfunc="sum")
 
 resolver(df)`,
     solution: `def resolver(df):
-    tabla = df.pivot_table(index="reserva", columns="mes", values="kg",
-                           aggfunc="sum", fill_value=0)
-    tabla["total"] = tabla.sum(axis=1)
+    ventas = df.assign(ingreso=df["unidades"] * df["precio"])
+    tabla = ventas.pivot_table(index="tienda", columns="categoria", values="ingreso",
+                               aggfunc="sum", fill_value=0)
+    tabla = (tabla.div(tabla.sum(axis=1), axis=0) * 100).round(1)
     tabla.columns.name = None
-    return tabla.sort_values("total", ascending=False)
+    return tabla
 
 resolver(df)`,
     hints: [
-      '`df.pivot_table(index="reserva", columns="mes", values="kg", aggfunc="sum")` crea la tabla.',
-      "El parámetro `fill_value=0` rellena los huecos.",
-      'Suma por filas con `tabla.sum(axis=1)` y ordena con `sort_values("total", ascending=False)`.',
+      "Primero calcula el ingreso de cada venta en una columna nueva (por ejemplo con `assign`).",
+      "Con `pivot_table` y `aggfunc=\"sum\"` obtienes el ingreso por tienda y categoría; `fill_value=0` rellena las combinaciones que no existen.",
+      "Para pasar a porcentaje de la fila, divide cada fila por su propio total: `div(..., axis=0)` con la suma por filas.",
     ],
     tests: [
       {
-        name: "Devuelve un DataFrame indexado por reserva",
+        name: "Una fila por tienda y una columna por categoría",
         code: `r = resolver(df.copy())
-assert isinstance(r, pd.DataFrame), "resolver debe devolver un DataFrame"
-assert r.index.name == "reserva", f"El índice debe llamarse 'reserva' (es {r.index.name!r})"`,
+assert isinstance(r, pd.DataFrame), "Debe devolver un DataFrame"
+assert list(r.index) == ["Cafetería", "Entrada", "Mirador"], f"Índice: {list(r.index)}"
+assert list(r.columns) == ["peluches", "postales", "tazas"], f"Columnas: {list(r.columns)}"
+assert r.columns.name is None, "Deja vacío el nombre del eje de columnas"`,
       },
       {
-        name: "Columnas: meses + total",
+        name: "Cada tienda suma 100 %",
         code: `r = resolver(df.copy())
-assert list(r.columns) == sorted(["ene", "feb", "mar"]) + ["total"], f"Columnas obtenidas: {list(r.columns)}"`,
+sumas = r.sum(axis=1)
+assert ((sumas - 100).abs() <= 0.2).all(), f"Cada fila debe sumar ~100 y suma {sumas.to_dict()}"`,
       },
       {
-        name: "Sin NaN: los huecos valen 0",
+        name: "Porcentajes de ingresos (no de unidades)",
         code: `r = resolver(df.copy())
-assert not r.isna().any().any(), "La tabla contiene NaN; usa fill_value=0"`,
+assert r.loc["Entrada", "peluches"] == 60.6, f"Peluches aporta el 60.6 % de los ingresos de Entrada, no {r.loc['Entrada', 'peluches']}"`,
       },
       {
-        name: "Valores y orden correctos",
+        name: "Tabla completa",
         code: `${ref1}
 check_frame(resolver(df.copy()), _ref(df.copy()))`,
       },
       {
-        name: "Funciona con datos ocultos",
+        name: "Funciona con datos ocultos (con combinaciones vacías)",
         code: `${ref1}
 otro = pd.DataFrame({
-    "reserva": ["A", "B", "C", "A", "C", "B", "D"],
-    "mes": ["abr", "may", "abr", "jun", "jun", "abr", "may"],
-    "kg": [5, 40, 12, 7, 3, 1, 22],
+    "tienda": ["Puente", "Puente", "Lago", "Lago", "Bosque"],
+    "categoria": ["gorras", "llaveros", "gorras", "imanes", "imanes"],
+    "unidades": [3, 10, 2, 8, 5],
+    "precio": [9.0, 2.5, 9.0, 3.0, 3.0],
 })
 check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
       },
@@ -183,78 +197,81 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     title: "Derretir",
     icon: "Droplets",
     topic: "melt",
-    description: `El cuidador anotó los kilos de bambú de cada panda en formato **ancho**: una columna \`panda\` y una columna por mes. Si un mes no se registró, hay \`NaN\`.
+    description: `La guardería mide a sus crías una vez al año. Alguien guardó todo en formato **ancho**, mezclando la medida y el año en el nombre de la columna: \`peso_2024\`, \`altura_2024\`, \`peso_2025\`, \`altura_2025\`…
 
-Completa \`resolver(df)\` para pasarlo a formato **largo** con exactamente las columnas \`["panda", "mes", "kg"]\`:
+Completa \`resolver(df)\` para devolver una tabla **larga y ordenada** con:
 
-- Elimina las filas cuyo \`kg\` sea \`NaN\`.
-- \`kg\` debe ser de tipo **entero**.
-- Ordena por \`panda\` (alfabético) y, dentro de cada panda, por mes **en el orden original de las columnas** (no alfabético).
-- El índice debe ser \`0, 1, 2, ...\`.
+- Una fila por **cría y año**.
+- Columnas exactamente \`["cria", "anio", "peso", "altura"]\`.
+- \`anio\` como **número entero**.
+- Ordenada por \`cria\` y luego por \`anio\`, con índice \`0, 1, 2, ...\`.
 
-> Los meses pueden cambiar en los tests: no los escribas a mano.`,
+> Ojo: las columnas pueden traer cualquier año, no solo 2024 y 2025. No hay valores faltantes.`,
     setup: `import pandas as pd
-import numpy as np
 
 df = pd.DataFrame({
-    "panda": ["Mei", "Bao", "Lin"],
-    "ene": [30, 42, np.nan],
-    "feb": [28, np.nan, 15],
-    "mar": [35, 40, 18],
+    "cria": ["Kiko", "Nube", "Lupe"],
+    "peso_2024": [35.5, 41.0, 28.25],
+    "altura_2024": [62, 70, 55],
+    "peso_2025": [52.0, 60.5, 44.0],
+    "altura_2025": [78, 85, 71],
 })`,
     starterCode: `def resolver(df):
-    largo = df.melt(id_vars="panda")
-    return largo
+    return df.melt(id_vars="cria")
 
 resolver(df)`,
     solution: `def resolver(df):
-    meses = [c for c in df.columns if c != "panda"]
-    largo = (
-        df.melt(id_vars="panda", var_name="mes", value_name="kg")
-          .dropna(subset=["kg"])
-          .astype({"kg": int})
-    )
-    largo["mes"] = pd.Categorical(largo["mes"], categories=meses, ordered=True)
-    largo = largo.sort_values(["panda", "mes"]).reset_index(drop=True)
-    largo["mes"] = largo["mes"].astype(str)
-    return largo
+    largo = df.melt(id_vars="cria", var_name="medida_anio", value_name="valor")
+    partes = largo["medida_anio"].str.split("_", expand=True)
+    largo = largo.assign(medida=partes[0], anio=partes[1].astype(int))
+    tabla = largo.pivot_table(index=["cria", "anio"], columns="medida",
+                              values="valor", aggfunc="first").reset_index()
+    tabla.columns.name = None
+    return tabla[["cria", "anio", "peso", "altura"]].sort_values(["cria", "anio"]).reset_index(drop=True)
 
 resolver(df)`,
     hints: [
-      '`df.melt(id_vars="panda", var_name="mes", value_name="kg")` pasa a formato largo.',
-      'Para ordenar los meses según las columnas, conviértelos en un `pd.Categorical(..., categories=meses, ordered=True)` o usa un `map` a su posición.',
-      "No olvides `dropna`, `astype(int)` y `reset_index(drop=True)`.",
+      "Con `melt` pasas todas las columnas de medidas a filas; el nombre de la columna original queda en una columna de texto.",
+      "Separa ese texto en dos partes (medida y año) con `.str.split(\"_\", expand=True)` y convierte el año a entero.",
+      "Ahora la medida debe volver a ser columna: un `pivot_table` con índice `[\"cria\", \"anio\"]` y `columns` = la medida.",
     ],
     tests: [
       {
-        name: "Columnas panda, mes, kg",
+        name: "Columnas y tamaño",
         code: `r = resolver(df.copy())
 assert isinstance(r, pd.DataFrame), "Debe devolver un DataFrame"
-assert list(r.columns) == ["panda", "mes", "kg"], f"Columnas obtenidas: {list(r.columns)}"`,
+assert list(r.columns) == ["cria", "anio", "peso", "altura"], f"Columnas: {list(r.columns)}"
+assert len(r) == 6, f"3 crías × 2 años = 6 filas, no {len(r)}"`,
       },
       {
-        name: "Sin NaN y kg entero",
+        name: "anio es entero",
         code: `r = resolver(df.copy())
-assert r["kg"].notna().all(), "Quedan filas con kg NaN"
-assert pd.api.types.is_integer_dtype(r["kg"]), f"kg debe ser entero (es {r['kg'].dtype})"`,
+assert pd.api.types.is_integer_dtype(r["anio"]), f"anio debe ser entero y es {r['anio'].dtype}"`,
       },
       {
-        name: "Orden por panda y mes original",
+        name: "Orden por cría y año",
+        code: `r = resolver(df.copy())
+assert list(zip(r["cria"], r["anio"]))[:2] == [("Kiko", 2024), ("Kiko", 2025)], "Ordena por cria y luego por anio"
+assert list(r.index) == list(range(len(r))), "Reinicia el índice"`,
+      },
+      {
+        name: "Valores correctos",
         code: `${ref2}
-r = resolver(df.copy())
-check_frame(r.astype({"mes": str}), _ref(df.copy()))`,
+check_frame(resolver(df.copy()), _ref(df.copy()))`,
       },
       {
-        name: "Funciona con datos ocultos",
+        name: "Funciona con datos ocultos (otros años)",
         code: `${ref2}
 otro = pd.DataFrame({
-    "panda": ["Zhu", "Ana", "Pei", "Kai"],
-    "oct": [1.0, np.nan, 3.0, 4.0],
-    "abr": [5.0, 6.0, np.nan, 8.0],
-    "dic": [np.nan, 9.0, 10.0, 11.0],
+    "cria": ["Sora", "Dango"],
+    "altura_2023": [50, 47],
+    "peso_2023": [20.0, 18.5],
+    "altura_2026": [90, 88],
+    "peso_2026": [70.25, 66.0],
+    "altura_2024": [64, 60],
+    "peso_2024": [39.0, 35.5],
 })
-r = resolver(otro.copy())
-check_frame(r.astype({"mes": str}), _ref(otro.copy()))`,
+check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
       },
     ],
     tutorialLink: "reestructurar",
@@ -266,81 +283,92 @@ check_frame(r.astype({"mes": str}), _ref(otro.copy()))`,
     title: "Índices múltiples",
     icon: "Network",
     topic: "MultiIndex, stack/unstack",
-    description: `\`df\` contiene nacimientos de pandas por \`reserva\` y \`año\` (puede haber varias filas por combinación).
+    description: `La red de clínicas veterinarias registra cada jornada con su \`clinica\`, el \`trimestre\` (\`"T1"\`…\`"T4"\`) y el número de \`consultas\`. El código inicial ya construye la Series \`s\` con las consultas totales por \`(clinica, trimestre)\`: un **MultiIndex** de dos niveles.
 
 Completa \`resolver(df)\` para que devuelva un **diccionario** con:
 
-- \`"serie"\`: una **Series** con la suma de \`nacimientos\` y un **MultiIndex** \`(reserva, año)\` (lo que da un \`groupby\` por dos columnas).
-- \`"tabla"\`: esa serie convertida en tabla con \`unstack\`: reservas en filas, años en columnas, y \`0\` donde no hubo datos.
-- \`"chengdu"\`: la sub-serie de la reserva \`"Chengdu"\`, indexada solo por \`año\` (pista: \`xs\` o \`loc\`).`,
+- \`"por_trimestre"\`: la misma Series \`s\` pero con los niveles **intercambiados** (primero \`trimestre\`, luego \`clinica\`) y ordenada por el índice.
+- \`"t2"\`: las consultas del trimestre \`"T2"\` de cada clínica (selecciona sobre el **segundo** nivel; el resultado tiene índice \`clinica\`).
+- \`"cuota"\`: qué **porcentaje** de las consultas de su trimestre hizo cada clínica, redondeado a 1 decimal, con el mismo índice que \`s\`.
+- \`"tabla"\`: \`s\` en formato ancho: una fila por clínica y una columna por trimestre, con \`0\` donde una clínica no tuvo consultas ese trimestre.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "reserva": ["Chengdu", "Chengdu", "Wolong", "Chengdu", "Wolong", "Ya'an", "Chengdu"],
-    "año": [2024, 2025, 2024, 2024, 2026, 2025, 2026],
-    "nacimientos": [2, 3, 1, 1, 4, 2, 5],
+    "clinica": ["Norte", "Sur", "Norte", "Este", "Sur", "Norte", "Este", "Sur", "Este", "Norte", "Sur"],
+    "trimestre": ["T1", "T1", "T2", "T2", "T2", "T3", "T3", "T3", "T1", "T1", "T4"],
+    "consultas": [12, 7, 15, 9, 11, 8, 14, 6, 5, 4, 10],
 })`,
     starterCode: `def resolver(df):
-    serie = df.groupby("reserva")["nacimientos"].sum()
-    return {
-        "serie": serie,
-        "tabla": None,
-        "chengdu": None,
-    }
+    s = df.groupby(["clinica", "trimestre"])["consultas"].sum()
+    return {"por_trimestre": s, "t2": None, "cuota": None, "tabla": None}
 
 resolver(df)`,
     solution: `def resolver(df):
-    serie = df.groupby(["reserva", "año"])["nacimientos"].sum()
+    s = df.groupby(["clinica", "trimestre"])["consultas"].sum()
+    total_trimestre = s.groupby(level="trimestre").transform("sum")
     return {
-        "serie": serie,
-        "tabla": serie.unstack("año", fill_value=0),
-        "chengdu": serie.xs("Chengdu", level="reserva"),
+        "por_trimestre": s.swaplevel().sort_index(),
+        "t2": s.xs("T2", level="trimestre"),
+        "cuota": (s / total_trimestre * 100).round(1),
+        "tabla": s.unstack("trimestre", fill_value=0),
     }
 
 resolver(df)`,
     hints: [
-      'Agrupa por dos columnas: `df.groupby(["reserva", "año"])["nacimientos"].sum()`.',
-      '`serie.unstack("año", fill_value=0)` mueve el nivel año a las columnas.',
-      '`serie.xs("Chengdu", level="reserva")` selecciona un valor de un nivel.',
+      "`swaplevel()` intercambia los niveles de un MultiIndex; después ordena con `sort_index()`.",
+      "`xs(valor, level=\"nombre_del_nivel\")` selecciona por un nivel que no es el primero.",
+      "Para el total de cada trimestre, agrupa la Series por ese nivel: `s.groupby(level=\"trimestre\")` y usa `transform` para que conserve el índice original. Para la tabla ancha, `unstack` mueve un nivel a las columnas.",
     ],
     tests: [
       {
-        name: "serie tiene un MultiIndex (reserva, año)",
+        name: "Devuelve las tres claves",
         code: `r = resolver(df.copy())
-s = r["serie"]
-assert isinstance(s, pd.Series), "serie debe ser una Series"
-assert isinstance(s.index, pd.MultiIndex), "El índice de serie debe ser un MultiIndex"
-assert list(s.index.names) == ["reserva", "año"], f"Niveles: {list(s.index.names)}"`,
+assert isinstance(r, dict) and set(r) == {"por_trimestre", "t2", "cuota", "tabla"}, "Devuelve un dict con por_trimestre, t2, cuota y tabla"`,
       },
       {
-        name: "serie suma correctamente",
+        name: "por_trimestre tiene los niveles intercambiados",
         code: `${ref3}
-check_series(resolver(df.copy())["serie"], _ref(df.copy())["serie"])`,
+r = resolver(df.copy())
+assert list(r["por_trimestre"].index.names) == ["trimestre", "clinica"], f"Niveles: {list(r['por_trimestre'].index.names)}"
+check_series(r["por_trimestre"], _ref(df.copy())["por_trimestre"])`,
       },
       {
-        name: "tabla con unstack y ceros",
+        name: "t2 selecciona sobre el segundo nivel",
         code: `${ref3}
-t = resolver(df.copy())["tabla"]
-assert not t.isna().any().any(), "La tabla tiene NaN; usa fill_value=0"
+r = resolver(df.copy())
+check_series(r["t2"], _ref(df.copy())["t2"], check_names=False)`,
+      },
+      {
+        name: "Las cuotas de cada trimestre suman 100",
+        code: `${ref3}
+r = resolver(df.copy())
+check_series(r["cuota"], _ref(df.copy())["cuota"], check_names=False)
+sumas = r["cuota"].groupby(level="trimestre").sum()
+assert ((sumas - 100).abs() <= 0.2).all(), f"Cada trimestre debe sumar ~100: {sumas.to_dict()}"`,
+      },
+      {
+        name: "Tabla ancha con unstack",
+        code: `${ref3}
+r = resolver(df.copy())
+t = r["tabla"]
+assert isinstance(t, pd.DataFrame), "tabla debe ser un DataFrame"
+assert list(t.columns) == ["T1", "T2", "T3", "T4"], f"Columnas: {list(t.columns)}"
+assert t.loc["Este", "T4"] == 0, "Rellena con 0 los trimestres sin consultas"
 check_frame(t, _ref(df.copy())["tabla"])`,
-      },
-      {
-        name: "chengdu indexada por año",
-        code: `${ref3}
-check_series(resolver(df.copy())["chengdu"], _ref(df.copy())["chengdu"])`,
       },
       {
         name: "Funciona con datos ocultos",
         code: `${ref3}
 otro = pd.DataFrame({
-    "reserva": ["Chengdu", "Foping", "Chengdu", "Foping", "Qinling"],
-    "año": [2020, 2020, 2022, 2021, 2022],
-    "nacimientos": [7, 1, 2, 3, 9],
+    "clinica": ["Río", "Valle", "Río", "Cima", "Valle", "Cima", "Río"],
+    "trimestre": ["T2", "T2", "T3", "T2", "T1", "T1", "T2"],
+    "consultas": [3, 9, 4, 6, 2, 7, 5],
 })
 r, e = resolver(otro.copy()), _ref(otro.copy())
-check_series(r["serie"], e["serie"])
-check_frame(r["tabla"], e["tabla"])
-check_series(r["chengdu"], e["chengdu"])`,
+check_series(r["por_trimestre"], e["por_trimestre"])
+check_series(r["t2"], e["t2"], check_names=False)
+check_series(r["cuota"], e["cuota"], check_names=False)
+check_frame(r["tabla"], e["tabla"])`,
       },
     ],
     tutorialLink: "reestructurar",
@@ -352,74 +380,84 @@ check_series(r["chengdu"], e["chengdu"])`,
     title: "Transformar en grupo",
     icon: "Shuffle",
     topic: "groupby().transform",
-    description: `\`df\` tiene el peso de cada panda y su reserva. Queremos comparar cada panda **con su propia reserva**, sin perder filas (por eso \`transform\` y no \`agg\`).
+    description: `En la guardería las crías se pesan por \`sala\`. Algunos pesos (\`peso_g\`) no se anotaron y quedaron vacíos.
 
-Completa \`resolver(df)\` para que añada estas columnas (en este orden) al final:
+Completa \`resolver(df)\` para devolver una **copia** de \`df\` (mismas filas y en el mismo orden) donde:
 
-1. \`"peso_medio_reserva"\`: media de \`peso_kg\` de su reserva, **redondeada a 2** decimales.
-2. \`"diferencia"\`: \`peso_kg\` − media de su reserva (usa la media **sin redondear**), redondeada a 2.
-3. \`"pct_reserva"\`: porcentaje que representa su peso sobre el total de su reserva (\`peso / suma * 100\`), redondeado a 1.
+1. Los \`peso_g\` vacíos se rellenan con la **mediana de su sala** (calculada con los pesos conocidos).
+2. Una columna \`z_sala\`: cuántas desviaciones estándar se aleja cada cría de la media de su sala, \`(peso - media_sala) / desviacion_sala\`, **redondeada a 2**. Calcúlala con los pesos ya rellenados.
+3. Una columna \`puesto_sala\`: el puesto de cada cría dentro de su sala por peso, de **mayor a menor**. Los empates comparten el puesto más bajo (\`1, 2, 2, 4\`) y es un **entero**.
 
-Después devuelve **solo los pandas por encima de la media de su reserva** (\`diferencia > 0\`), manteniendo el **orden y el índice original**.`,
+Columnas finales: \`["cria", "sala", "peso_g", "z_sala", "puesto_sala"]\`.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "panda": ["Mei", "Bao", "Lin", "Tao", "Yun", "Pei", "Kai"],
-    "reserva": ["Chengdu", "Wolong", "Chengdu", "Wolong", "Chengdu", "Ya'an", "Ya'an"],
-    "peso_kg": [80.5, 110.0, 45.2, 120.3, 95.1, 60.0, 88.4],
+    "cria": ["Kiko", "Nube", "Lupe", "Tofu", "Sora", "Dango", "Yuzu", "Momo"],
+    "sala": ["A", "A", "A", "B", "B", "B", "B", "A"],
+    "peso_g": [820.0, None, 760.0, 1010.0, 950.0, None, 1100.0, 900.0],
 })`,
     starterCode: `def resolver(df):
-    df["peso_medio_reserva"] = df.groupby("reserva")["peso_kg"].mean()
+    df = df.copy()
+    df["peso_g"] = df["peso_g"].fillna(df["peso_g"].median())
     return df
 
 resolver(df)`,
     solution: `def resolver(df):
-    g = df.groupby("reserva")["peso_kg"]
-    media = g.transform("mean")
-    df = df.assign(
-        peso_medio_reserva=media.round(2),
-        diferencia=(df["peso_kg"] - media).round(2),
-        pct_reserva=(df["peso_kg"] / g.transform("sum") * 100).round(1),
-    )
-    return df[df["diferencia"] > 0]
+    d = df.copy()
+    mediana_sala = d.groupby("sala")["peso_g"].transform("median")
+    d["peso_g"] = d["peso_g"].fillna(mediana_sala)
+    por_sala = d.groupby("sala")["peso_g"]
+    d["z_sala"] = ((d["peso_g"] - por_sala.transform("mean")) / por_sala.transform("std")).round(2)
+    d["puesto_sala"] = por_sala.rank(method="min", ascending=False).astype(int)
+    return d
 
 resolver(df)`,
     hints: [
-      '`df.groupby("reserva")["peso_kg"].mean()` devuelve una fila por reserva; `transform("mean")` devuelve un valor por fila.',
-      'Guarda la media sin redondear en una variable y úsala para calcular la diferencia.',
-      'Filtra al final con `df[df["diferencia"] > 0]` sin hacer `reset_index`.',
+      "`groupby(\"sala\")[\"peso_g\"].transform(\"median\")` devuelve una Series alineada con cada fila: úsala dentro de `fillna`.",
+      "Después de rellenar, vuelve a agrupar: la media y la desviación (`\"std\"`) por sala también salen con `transform`.",
+      "El puesto dentro del grupo se calcula con `rank` sobre el groupby; mira el parámetro `method` para los empates.",
     ],
     tests: [
       {
-        name: "Añade las 3 columnas en orden",
+        name: "No quedan pesos vacíos y se usa la mediana de la sala",
         code: `r = resolver(df.copy())
-assert isinstance(r, pd.DataFrame), "Debe devolver un DataFrame"
-assert list(r.columns) == ["panda", "reserva", "peso_kg", "peso_medio_reserva", "diferencia", "pct_reserva"], f"Columnas: {list(r.columns)}"`,
+assert r["peso_g"].notna().all(), "No deben quedar pesos vacíos"
+nube = r.loc[r["cria"] == "Nube", "peso_g"].iloc[0]
+assert nube == 820.0, f"Nube (sala A) debe recibir la mediana de su sala, 820.0, y tiene {nube}"`,
       },
       {
-        name: "Solo pandas por encima de su media",
+        name: "Columnas y orden de filas",
         code: `r = resolver(df.copy())
-assert (r["diferencia"] > 0).all(), "Hay filas con diferencia <= 0"
-assert sorted(r["panda"]) == sorted(["Mei", "Tao", "Yun", "Kai"]), f"Pandas obtenidos: {list(r['panda'])}"`,
+assert list(r.columns) == ["cria", "sala", "peso_g", "z_sala", "puesto_sala"], f"Columnas: {list(r.columns)}"
+assert list(r["cria"]) == list(df["cria"]), "Mantén las filas en su orden original"`,
       },
       {
-        name: "Mantiene el índice original",
+        name: "Puesto con empates",
         code: `r = resolver(df.copy())
-assert list(r.index) == [0, 3, 4, 6], f"Índice obtenido: {list(r.index)}"`,
+puestos = dict(zip(r["cria"], r["puesto_sala"]))
+assert puestos["Momo"] == 1 and puestos["Kiko"] == 2 and puestos["Nube"] == 2 and puestos["Lupe"] == 4, f"Puestos sala A: {puestos}"
+assert pd.api.types.is_integer_dtype(r["puesto_sala"]), "puesto_sala debe ser entero"`,
       },
       {
-        name: "Valores correctos",
+        name: "Valores completos",
         code: `${ref4}
 check_frame(resolver(df.copy()), _ref(df.copy()))`,
+      },
+      {
+        name: "No modifica el df original",
+        code: `original = df.copy()
+copia = df.copy()
+resolver(copia)
+check_frame(copia, original)`,
       },
       {
         name: "Funciona con datos ocultos",
         code: `${ref4}
 otro = pd.DataFrame({
-    "panda": list("abcdefgh"),
-    "reserva": ["X", "Y", "X", "X", "Y", "Z", "Z", "Y"],
-    "peso_kg": [10.0, 50.5, 33.3, 12.1, 70.0, 99.9, 1.0, 20.2],
-}, index=[10, 20, 30, 40, 50, 60, 70, 80])
+    "cria": ["a", "b", "c", "d", "e", "f", "g"],
+    "sala": ["X", "Y", "X", "Y", "X", "Y", "Y"],
+    "peso_g": [500.0, 700.0, None, 650.0, 540.0, None, 720.0],
+})
 check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
       },
     ],
@@ -432,79 +470,78 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     title: "Ventanas",
     icon: "AppWindow",
     topic: "rolling y shift",
-    description: `\`df\` registra cuántos kg de bambú comió cada panda cada día, pero las filas vienen **desordenadas**.
+    description: `Cada cría lleva un podómetro. \`df\` tiene una fila por \`cria\` y \`dia\` (1, 2, 3…) con los \`pasos\` de ese día, **desordenadas**.
 
-Completa \`resolver(df)\` para que:
+Completa \`resolver(df)\` para devolver la tabla ordenada por \`cria\` y \`dia\` (índice \`0, 1, 2, ...\`) con tres columnas nuevas, calculadas **por cría**:
 
-1. Ordene por \`panda\` y luego por \`fecha\`, y reinicie el índice (\`0, 1, 2, ...\`).
-2. Añada \`"ayer"\`: los kg del día anterior **del mismo panda** (\`NaN\` en su primer día).
-3. Añada \`"cambio"\`: \`kg − ayer\`.
-4. Añada \`"media_3d"\`: media móvil de **3 días** de \`kg\` **dentro de cada panda** (los dos primeros días de cada panda son \`NaN\`), redondeada a 2.
+- \`var_pct\`: variación porcentual de los pasos respecto al día anterior, × 100 y **redondeada a 1** (el primer día de cada cría queda vacío).
+- \`max_3\`: el máximo de pasos de los últimos 3 días, incluido el actual (los primeros días usan los que haya).
+- \`racha\`: cuántos días **seguidos** lleva subiendo hasta hoy. Si hoy no subió respecto a ayer (o es su primer día), vale \`0\`; si subió, es la racha de ayer + 1.
 
-Columnas finales: \`["panda", "fecha", "kg", "ayer", "cambio", "media_3d"]\`.`,
+Columnas finales: \`["cria", "dia", "pasos", "var_pct", "max_3", "racha"]\`.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "panda": ["Mei", "Bao", "Mei", "Bao", "Mei", "Bao", "Mei", "Bao"],
-    "fecha": pd.to_datetime(["2026-03-02", "2026-03-01", "2026-03-01", "2026-03-03",
-                             "2026-03-04", "2026-03-02", "2026-03-03", "2026-03-04"]),
-    "kg": [12.0, 15.5, 10.0, 14.0, 13.5, 16.0, 11.0, 15.0],
+    "cria": ["Nube", "Kiko", "Kiko", "Nube", "Kiko", "Nube", "Kiko", "Nube", "Kiko", "Kiko", "Nube"],
+    "dia": [3, 2, 1, 1, 4, 5, 3, 2, 6, 5, 4],
+    "pasos": [900, 1200, 1000, 800, 1400, 700, 1500, 800, 1800, 1600, 1000],
 })`,
     starterCode: `def resolver(df):
-    df = df.sort_values("fecha")
-    df["ayer"] = df["kg"].shift(1)
-    df["cambio"] = df["kg"] - df["ayer"]
-    df["media_3d"] = df["kg"].rolling(3).mean()
-    return df
+    return df.sort_values(["cria", "dia"])
 
 resolver(df)`,
     solution: `def resolver(df):
-    df = df.sort_values(["panda", "fecha"]).reset_index(drop=True)
-    g = df.groupby("panda")["kg"]
-    df["ayer"] = g.shift(1)
-    df["cambio"] = df["kg"] - df["ayer"]
-    df["media_3d"] = g.transform(lambda s: s.rolling(3).mean()).round(2)
-    return df
+    d = df.sort_values(["cria", "dia"]).reset_index(drop=True)
+    pasos = d.groupby("cria")["pasos"]
+    d["var_pct"] = (pasos.pct_change() * 100).round(1)
+    d["max_3"] = pasos.transform(lambda s: s.rolling(3, min_periods=1).max())
+    sube = pasos.diff() > 0
+    tramo = (~sube).groupby(d["cria"]).cumsum()
+    d["racha"] = sube.astype(int).groupby([d["cria"], tramo]).cumsum()
+    return d
 
 resolver(df)`,
     hints: [
-      'Ordena con `sort_values(["panda", "fecha"])` y luego `reset_index(drop=True)`.',
-      '`df.groupby("panda")["kg"].shift(1)` desplaza dentro de cada panda.',
-      'Para la media móvil por grupo: `groupby("panda")["kg"].transform(lambda s: s.rolling(3).mean())`.',
+      "Ordena primero. Sobre `groupby(\"cria\")[\"pasos\"]` tienes `pct_change()` y `diff()`, y con `transform` puedes aplicar un `rolling(3, min_periods=1)`.",
+      "Para la racha, marca los días que suben (`diff() > 0`). Cada día que **no** sube empieza un tramo nuevo: un `cumsum` de esos días numera los tramos.",
+      "Dentro de cada combinación (cría, tramo), la suma acumulada de los días que suben es exactamente la racha.",
     ],
     tests: [
       {
-        name: "Ordenado por panda y fecha",
+        name: "Ordenado por cría y día",
         code: `r = resolver(df.copy())
-assert list(r.columns) == ["panda", "fecha", "kg", "ayer", "cambio", "media_3d"], f"Columnas: {list(r.columns)}"
-assert list(r.index) == list(range(len(r))), "Reinicia el índice"
-assert list(r["panda"]) == ["Bao"] * 4 + ["Mei"] * 4, "Ordena primero por panda"`,
+assert list(r.columns) == ["cria", "dia", "pasos", "var_pct", "max_3", "racha"], f"Columnas: {list(r.columns)}"
+assert list(zip(r["cria"], r["dia"]))[:3] == [("Kiko", 1), ("Kiko", 2), ("Kiko", 3)], "Ordena por cria y dia"
+assert list(r.index) == list(range(len(r))), "Reinicia el índice"`,
       },
       {
-        name: "shift no mezcla pandas",
+        name: "Variación porcentual por cría",
         code: `r = resolver(df.copy())
-primeros = r.groupby("panda").head(1)
-assert primeros["ayer"].isna().all(), "El primer día de cada panda debe tener ayer = NaN"`,
+kiko = r[r["cria"] == "Kiko"]["var_pct"].tolist()
+assert pd.isna(kiko[0]), "El primer día de cada cría no tiene variación"
+assert kiko[1:] == [20.0, 25.0, -6.7, 14.3, 12.5], f"var_pct de Kiko: {kiko}"
+nube = r[r["cria"] == "Nube"]["var_pct"].tolist()
+assert pd.isna(nube[0]), "No mezcles crías: el primer día de Nube no tiene variación"`,
       },
       {
-        name: "Media móvil por panda",
+        name: "Máximo de 3 días",
         code: `r = resolver(df.copy())
-assert r.groupby("panda")["media_3d"].apply(lambda s: s.iloc[:2].isna().all()).all(), "Los 2 primeros días de cada panda deben ser NaN"`,
+assert r[r["cria"] == "Nube"]["max_3"].tolist() == [800, 800, 900, 1000, 1000], f"max_3 de Nube: {r[r['cria'] == 'Nube']['max_3'].tolist()}"`,
       },
       {
-        name: "Valores correctos",
-        code: `${ref5}
-check_frame(resolver(df.copy()), _ref(df.copy()))`,
+        name: "Rachas de subida",
+        code: `r = resolver(df.copy())
+assert r[r["cria"] == "Kiko"]["racha"].tolist() == [0, 1, 2, 0, 1, 2], f"racha de Kiko: {r[r['cria'] == 'Kiko']['racha'].tolist()}"
+assert r[r["cria"] == "Nube"]["racha"].tolist() == [0, 0, 1, 2, 0], "Si los pasos se repiten no cuenta como subida"`,
       },
       {
         name: "Funciona con datos ocultos",
         code: `${ref5}
-fechas = pd.date_range("2026-01-01", periods=5, freq="D")
 otro = pd.DataFrame({
-    "panda": ["Zhu"] * 5 + ["Ana"] * 5 + ["Pei"] * 2,
-    "fecha": list(fechas[::-1]) + list(fechas) + list(fechas[:2]),
-    "kg": [1.0, 2.0, 3.0, 4.0, 5.0, 9.0, 8.0, 7.0, 7.5, 6.0, 3.3, 4.4],
-}).sample(frac=1, random_state=1)
+    "cria": ["x", "y", "x", "y", "x", "y", "x", "x", "y"],
+    "dia": [2, 1, 1, 3, 3, 2, 5, 4, 4],
+    "pasos": [50, 10, 40, 30, 60, 20, 90, 70, 25],
+})
 check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
       },
     ],
@@ -517,65 +554,60 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     title: "Remuestreo",
     icon: "CalendarClock",
     topic: "resample",
-    description: `\`df\` contiene cada comida de un panda con su marca de tiempo (\`fecha\`, tipo datetime) y los \`kg\` comidos. Hay días en los que **no comió** (no aparecen).
+    description: `La taquilla del santuario registra cada entrada vendida: el \`momento\` exacto (datetime) y cuántas \`personas\` entraron en ese grupo. Las filas pueden venir **desordenadas**.
 
-Completa \`resolver(df)\` para que devuelva un resumen **diario** con:
+Completa \`resolver(df)\` para obtener un **resumen semanal** (semanas que terminan en domingo, la frecuencia \`"W"\`) con:
 
-- Índice: cada día entre la primera y la última comida (**incluyendo** los días sin comidas), llamado \`"fecha"\`.
-- \`"total"\`: suma de kg del día (0 si no hubo comidas).
-- \`"comidas"\`: número de comidas del día (0 si no hubo).
-- \`"acumulado"\`: suma acumulada de \`total\`.
+- **Índice**: el final de cada semana, llamado \`semana\`.
+- \`visitantes\`: total de personas de la semana.
+- \`grupos\`: cuántas entradas se vendieron.
+- \`cambio\`: diferencia de \`visitantes\` respecto a la semana anterior (la primera queda vacía).
 
-Columnas en ese orden.`,
+Las semanas **sin ventas** también deben aparecer, con \`visitantes = 0\` y \`grupos = 0\`.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "fecha": pd.to_datetime([
-        "2026-05-01 08:10", "2026-05-01 13:45", "2026-05-01 19:20",
-        "2026-05-02 09:00", "2026-05-04 07:30", "2026-05-04 18:00",
-        "2026-05-05 12:15",
+    "momento": pd.to_datetime([
+        "2026-04-14 11:00", "2026-04-06 10:15", "2026-04-28 10:10", "2026-04-09 09:05",
+        "2026-05-02 13:20", "2026-04-07 12:40", "2026-04-27 15:45", "2026-04-12 16:30",
     ]),
-    "kg": [4.5, 6.0, 3.5, 7.2, 5.0, 5.5, 8.1],
+    "personas": [5, 4, 7, 6, 4, 2, 2, 3],
 })`,
     starterCode: `def resolver(df):
-    diario = df.groupby(df["fecha"].dt.date)["kg"].sum()
-    return diario
+    return df.set_index("momento").resample("ME").sum()
 
 resolver(df)`,
     solution: `def resolver(df):
-    kg = df.set_index("fecha").sort_index()["kg"].resample("D")
-    out = pd.DataFrame({"total": kg.sum(), "comidas": kg.count()})
-    out["acumulado"] = out["total"].cumsum()
-    return out
+    semanas = df.set_index("momento").sort_index()["personas"].resample("W")
+    resumen = pd.DataFrame({"visitantes": semanas.sum(), "grupos": semanas.count()})
+    resumen["cambio"] = resumen["visitantes"].diff()
+    resumen.index.name = "semana"
+    return resumen
 
 resolver(df)`,
     hints: [
-      "`resample` necesita un índice de fechas: `df.set_index(\"fecha\")`.",
-      '`.resample("D")` agrupa por día e incluye los días vacíos.',
-      "Combina `sum()` y `count()` en un DataFrame y añade `cumsum()`.",
+      "`resample` necesita un índice de fechas: usa `set_index(\"momento\")` (y ordénalo).",
+      "Con `resample(\"W\")` sobre la columna de personas, `sum()` y `count()` ya devuelven 0 en las semanas vacías.",
+      "La variación respecto a la semana anterior es un `diff()` sobre la columna de visitantes.",
     ],
     tests: [
       {
-        name: "DataFrame con columnas total, comidas, acumulado",
+        name: "Columnas e índice semanal",
         code: `r = resolver(df.copy())
 assert isinstance(r, pd.DataFrame), "Debe devolver un DataFrame"
-assert list(r.columns) == ["total", "comidas", "acumulado"], f"Columnas: {list(r.columns)}"`,
+assert list(r.columns) == ["visitantes", "grupos", "cambio"], f"Columnas: {list(r.columns)}"
+assert r.index.name == "semana", f"El índice debe llamarse 'semana', no {r.index.name!r}"
+assert all(d.dayofweek == 6 for d in r.index), "Cada semana debe terminar en domingo (frecuencia 'W')"`,
       },
       {
-        name: "Incluye los días sin comidas",
+        name: "Semanas sin ventas con 0",
         code: `r = resolver(df.copy())
-assert len(r) == 5, f"Se esperaban 5 días (del 1 al 5 de mayo) y hay {len(r)}"
-assert isinstance(r.index, pd.DatetimeIndex), "El índice debe ser de fechas"
-assert r.index.name == "fecha", "El índice debe llamarse 'fecha'"`,
+vacias = r[r["grupos"] == 0]
+assert len(vacias) >= 1, "Debe aparecer la semana sin ventas"
+assert (vacias["visitantes"] == 0).all(), "Una semana sin ventas tiene 0 visitantes"`,
       },
       {
-        name: "Días vacíos valen 0",
-        code: `r = resolver(df.copy())
-d = r.loc["2026-05-03"]
-assert d["total"] == 0 and d["comidas"] == 0, "El 3 de mayo debe tener total 0 y comidas 0"`,
-      },
-      {
-        name: "Valores correctos",
+        name: "Totales y cambio",
         code: `${ref6}
 check_frame(resolver(df.copy()), _ref(df.copy()), check_freq=False)`,
       },
@@ -583,8 +615,8 @@ check_frame(resolver(df.copy()), _ref(df.copy()), check_freq=False)`,
         name: "Funciona con datos ocultos",
         code: `${ref6}
 otro = pd.DataFrame({
-    "fecha": pd.to_datetime(["2025-12-30 23:59", "2025-12-28 10:00", "2026-01-02 00:01", "2025-12-30 01:00"]),
-    "kg": [1.5, 2.0, 3.25, 4.0],
+    "momento": pd.to_datetime(["2025-11-03 09:00", "2025-11-30 18:00", "2025-11-05 12:00", "2025-12-08 10:30"]),
+    "personas": [3, 8, 1, 6],
 })
 check_frame(resolver(otro.copy()), _ref(otro.copy()), check_freq=False)`,
       },
@@ -598,61 +630,59 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()), check_freq=False)`,
     title: "Ranking",
     icon: "Trophy",
     topic: "rank y top-N por grupo",
-    description: `Se celebraron las Olimpiadas del Bambú y \`df\` tiene los \`puntos\` de cada \`panda\` por \`reserva\`. ¡Hay empates!
+    description: `¡Carrera de crías! Cada corredor tiene un \`dorsal\`, su \`corredor\` (nombre), su \`categoria\` y su tiempo en \`segundos\` (**menos es mejor**).
 
-Completa \`resolver(df)\` para obtener el **podio de cada reserva**:
+Completa \`resolver(df, n=3)\` para obtener el **podio de cada categoría**:
 
-1. Añade \`"rank_reserva"\`: posición dentro de su reserva, de **más a menos puntos**, con método **denso** (\`method="dense"\`: los empatados comparten puesto y el siguiente no salta), como **entero**.
-2. Quédate con los que tengan \`rank_reserva <= 2\` (con empates puede haber más de 2 por reserva).
-3. Ordena por \`reserva\`, \`rank_reserva\` y \`panda\` (todo ascendente) y reinicia el índice.
-
-Columnas: \`["reserva", "panda", "puntos", "rank_reserva"]\`.`,
+1. Calcula \`posicion\` dentro de su categoría por tiempo: el más rápido es 1. Los **empates** comparten posición y la siguiente se salta (\`1, 1, 1, 4\`). Debe ser un **entero**.
+2. Quédate con los corredores con \`posicion <= n\` (si hay empates en el corte, entran todos).
+3. Ordena por \`categoria\`, \`posicion\` y, para desempatar, por \`dorsal\` ascendente. Índice \`0, 1, 2, ...\`.
+4. Columnas: \`["categoria", "posicion", "dorsal", "corredor", "segundos"]\`.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "panda": ["Mei", "Bao", "Lin", "Tao", "Yun", "Pei", "Kai", "Zhu", "Ana"],
-    "reserva": ["Chengdu", "Chengdu", "Chengdu", "Chengdu", "Wolong", "Wolong", "Wolong", "Ya'an", "Ya'an"],
-    "puntos": [88, 95, 88, 70, 60, 75, 60, 90, 85],
+    "dorsal": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    "corredor": ["Kiko", "Nube", "Lupe", "Tofu", "Sora", "Dango", "Yuzu", "Momo", "Kumo", "Hana"],
+    "categoria": ["crías", "adultos", "crías", "adultos", "crías",
+                  "adultos", "crías", "adultos", "crías", "adultos"],
+    "segundos": [42.5, 38.0, 40.1, 38.0, 42.5, 45.3, 39.9, 41.0, 44.0, 38.0],
 })`,
-    starterCode: `def resolver(df):
-    df["rank_reserva"] = df["puntos"].rank(ascending=False)
-    return df.head(2)
+    starterCode: `def resolver(df, n=3):
+    return df.sort_values("segundos").head(n)
 
 resolver(df)`,
-    solution: `def resolver(df):
-    df = df.assign(
-        rank_reserva=df.groupby("reserva")["puntos"]
-                       .rank(method="dense", ascending=False)
-                       .astype(int)
-    )
-    podio = df[df["rank_reserva"] <= 2]
-    podio = podio.sort_values(["reserva", "rank_reserva", "panda"]).reset_index(drop=True)
-    return podio[["reserva", "panda", "puntos", "rank_reserva"]]
+    solution: `def resolver(df, n=3):
+    d = df.copy()
+    d["posicion"] = d.groupby("categoria")["segundos"].rank(method="min").astype(int)
+    podio = d[d["posicion"] <= n]
+    podio = podio.sort_values(["categoria", "posicion", "dorsal"]).reset_index(drop=True)
+    return podio[["categoria", "posicion", "dorsal", "corredor", "segundos"]]
 
 resolver(df)`,
     hints: [
-      '`df.groupby("reserva")["puntos"].rank(...)` calcula el ranking dentro de cada reserva.',
-      'Usa `method="dense", ascending=False` y convierte con `.astype(int)`.',
-      "Filtra, ordena por las tres columnas y `reset_index(drop=True)`.",
+      "`rank` también funciona sobre un groupby: así cada categoría tiene su propio ranking.",
+      "Menos segundos es mejor, así que el orden por defecto (ascendente) ya sirve. Para que los empates compartan el puesto más bajo y se salte el siguiente, revisa `method`.",
+      "Filtra con `posicion <= n` y ordena por las tres columnas que pide el enunciado.",
     ],
     tests: [
       {
-        name: "Columnas correctas y rank entero",
+        name: "Columnas y posición entera",
         code: `r = resolver(df.copy())
-assert list(r.columns) == ["reserva", "panda", "puntos", "rank_reserva"], f"Columnas: {list(r.columns)}"
-assert pd.api.types.is_integer_dtype(r["rank_reserva"]), "rank_reserva debe ser entero"`,
+assert list(r.columns) == ["categoria", "posicion", "dorsal", "corredor", "segundos"], f"Columnas: {list(r.columns)}"
+assert pd.api.types.is_integer_dtype(r["posicion"]), "posicion debe ser entero"`,
       },
       {
-        name: "Ranking por reserva (no global)",
+        name: "Empates comparten posición",
         code: `r = resolver(df.copy())
-assert set(r["reserva"]) == {"Chengdu", "Wolong", "Ya'an"}, "Cada reserva debe tener su podio"`,
+adultos = r[r["categoria"] == "adultos"]
+assert adultos["posicion"].tolist() == [1, 1, 1], f"Tres adultos empatan en 38.0 s: {adultos['posicion'].tolist()}"
+assert adultos["dorsal"].tolist() == [12, 14, 20], "Desempata por dorsal ascendente"`,
       },
       {
-        name: "Empates con método denso",
+        name: "Entran todos los empatados en el corte",
         code: `r = resolver(df.copy())
-ch = r[r["reserva"] == "Chengdu"]
-assert list(ch["panda"]) == ["Bao", "Lin", "Mei"], f"Podio de Chengdu: {list(ch['panda'])}"
-assert list(ch["rank_reserva"]) == [1, 2, 2], f"Ranks de Chengdu: {list(ch['rank_reserva'])}"`,
+crias = r[r["categoria"] == "crías"]
+assert crias["corredor"].tolist() == ["Yuzu", "Lupe", "Kiko", "Sora"], f"Podio de crías: {crias['corredor'].tolist()}"`,
       },
       {
         name: "Resultado completo",
@@ -660,14 +690,16 @@ assert list(ch["rank_reserva"]) == [1, 2, 2], f"Ranks de Chengdu: {list(ch['rank
 check_frame(resolver(df.copy()), _ref(df.copy()))`,
       },
       {
-        name: "Funciona con datos ocultos",
+        name: "Respeta n con datos ocultos",
         code: `${ref7}
 otro = pd.DataFrame({
-    "panda": ["p1", "p2", "p3", "p4", "p5", "p6", "p7"],
-    "reserva": ["B", "A", "B", "A", "A", "B", "A"],
-    "puntos": [10, 50, 10, 50, 40, 5, 30],
+    "dorsal": [5, 3, 8, 1, 9, 2, 7],
+    "corredor": ["a", "b", "c", "d", "e", "f", "g"],
+    "categoria": ["X", "X", "Y", "Y", "X", "Y", "X"],
+    "segundos": [30.0, 28.5, 50.0, 49.0, 28.5, 49.0, 31.0],
 })
-check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
+check_frame(resolver(otro.copy(), n=2), _ref(otro.copy(), n=2))
+check_frame(resolver(otro.copy(), n=1), _ref(otro.copy(), n=1))`,
       },
     ],
     tutorialLink: "agregacion",
@@ -679,84 +711,85 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     title: "Cortes",
     icon: "Scissors",
     topic: "cut, qcut y crosstab",
-    description: `Queremos clasificar a los pandas de \`df\` y ver cuántos hay de cada etapa en cada reserva.
+    description: `La veterinaria toma la \`temperatura\` de las crías en tres \`turno\`s (mañana, tarde, noche) y quiere ver en qué turno hay más fiebre.
 
-Completa \`resolver(df)\` para que devuelva un **diccionario** con:
+Completa \`resolver(df)\` para devolver un **diccionario** con:
 
 - \`"datos"\`: una copia de \`df\` con dos columnas nuevas:
-  - \`"etapa"\` con \`pd.cut\` sobre \`edad\` usando intervalos **cerrados por la izquierda**: \`cría\` [0, 2), \`joven\` [2, 5), \`adulto\` [5, 15), \`anciano\` [15, ∞).
-  - \`"cuartil_peso"\` con \`pd.qcut\` sobre \`peso_kg\` en **4 cuantiles** con etiquetas \`Q1\`, \`Q2\`, \`Q3\`, \`Q4\`.
-- \`"tabla"\`: \`pd.crosstab\` con las etapas en filas y las reservas en columnas. Las filas deben respetar el orden **cría, joven, adulto, anciano** (mantén \`etapa\` como categórica).`,
+  - \`rango\`: la temperatura clasificada en intervalos **cerrados a la izquierda**: \`[35, 37)\` → \`"baja"\`, \`[37, 38.5)\` → \`"normal"\`, \`[38.5, 40)\` → \`"alta"\`, \`[40, 43)\` → \`"fiebre"\`. Así, 37.0 es \`"normal"\` y 40.0 es \`"fiebre"\`.
+  - \`talla\`: el \`peso_kg\` repartido en **3 grupos de igual tamaño** por cuantiles: \`"ligero"\`, \`"medio"\`, \`"pesado"\`.
+- \`"tabla"\`: una tabla cruzada con los turnos en las filas y los rangos en las columnas, donde cada celda es el **porcentaje de las crías de ese turno** en ese rango, redondeado a 1 decimal (cada fila suma 100).`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "panda": ["Mei", "Bao", "Lin", "Tao", "Yun", "Pei", "Kai", "Zhu"],
-    "reserva": ["Chengdu", "Wolong", "Chengdu", "Wolong", "Chengdu", "Wolong", "Chengdu", "Chengdu"],
-    "edad": [0, 4, 2, 15, 7, 1, 22, 5],
-    "peso_kg": [15.0, 70.5, 45.0, 120.0, 98.2, 30.1, 105.4, 88.8],
+    "cria": ["Kiko", "Nube", "Lupe", "Tofu", "Sora", "Dango", "Yuzu", "Momo", "Kumo"],
+    "turno": ["mañana", "tarde", "noche", "mañana", "tarde", "noche", "mañana", "tarde", "noche"],
+    "temperatura": [36.8, 37.0, 38.5, 37.9, 39.2, 36.4, 40.0, 38.4, 37.5],
+    "peso_kg": [3.2, 4.1, 2.8, 5.0, 3.9, 4.4, 2.5, 3.6, 4.8],
 })`,
     starterCode: `def resolver(df):
-    df["etapa"] = pd.cut(df["edad"], bins=4)
-    return {
-        "datos": df,
-        "tabla": None,
-    }
+    d = df.copy()
+    d["rango"] = pd.cut(d["temperatura"], bins=[35, 37, 38.5, 40, 43],
+                        labels=["baja", "normal", "alta", "fiebre"])
+    return {"datos": d, "tabla": pd.crosstab(d["turno"], d["rango"])}
 
 resolver(df)`,
     solution: `def resolver(df):
-    datos = df.assign(
-        etapa=pd.cut(df["edad"], bins=[0, 2, 5, 15, float("inf")], right=False,
-                     labels=["cría", "joven", "adulto", "anciano"]),
-        cuartil_peso=pd.qcut(df["peso_kg"], 4, labels=["Q1", "Q2", "Q3", "Q4"]),
-    )
-    return {
-        "datos": datos,
-        "tabla": pd.crosstab(datos["etapa"], datos["reserva"]),
-    }
+    d = df.copy()
+    d["rango"] = pd.cut(d["temperatura"], bins=[35, 37, 38.5, 40, 43], right=False,
+                        labels=["baja", "normal", "alta", "fiebre"])
+    d["talla"] = pd.qcut(d["peso_kg"], 3, labels=["ligero", "medio", "pesado"])
+    porcentajes = pd.crosstab(d["turno"], d["rango"], normalize="index")
+    return {"datos": d, "tabla": (porcentajes * 100).round(1)}
 
 resolver(df)`,
     hints: [
-      '`pd.cut(serie, bins=[0, 2, 5, 15, float("inf")], right=False, labels=[...])`.',
-      '`pd.qcut(serie, 4, labels=["Q1", "Q2", "Q3", "Q4"])` divide en cuartiles.',
-      '`pd.crosstab(datos["etapa"], datos["reserva"])` cuenta combinaciones.',
+      "Por defecto `pd.cut` cierra los intervalos por la **derecha**; hay un parámetro para cambiarlo.",
+      "`pd.qcut(serie, 3, labels=[...])` reparte en grupos con la misma cantidad de elementos.",
+      "`pd.crosstab` acepta `normalize=\"index\"` para obtener proporciones por fila; luego pásalas a porcentaje.",
     ],
     tests: [
       {
-        name: "Etapas con intervalos cerrados por la izquierda",
+        name: "Devuelve datos y tabla",
         code: `r = resolver(df.copy())
-et = list(r["datos"]["etapa"].astype(str))
-assert et == ["cría", "joven", "joven", "anciano", "adulto", "cría", "anciano", "adulto"], f"Etapas obtenidas: {et}"`,
+assert isinstance(r, dict) and set(r) == {"datos", "tabla"}, "Devuelve un dict con 'datos' y 'tabla'"
+assert {"rango", "talla"} <= set(r["datos"].columns), "Faltan las columnas rango y/o talla"`,
       },
       {
-        name: "Cuartiles de peso",
+        name: "Intervalos cerrados a la izquierda",
+        code: `r = resolver(df.copy())["datos"]
+rango = dict(zip(r["cria"], r["rango"].astype(str)))
+assert rango["Nube"] == "normal", f"37.0 debe ser 'normal' y es {rango['Nube']!r}"
+assert rango["Yuzu"] == "fiebre", f"40.0 debe ser 'fiebre' y es {rango['Yuzu']!r}"
+assert rango["Lupe"] == "alta", f"38.5 debe ser 'alta' y es {rango['Lupe']!r}"`,
+      },
+      {
+        name: "Tallas por cuantiles",
+        code: `r = resolver(df.copy())["datos"]
+conteo = r["talla"].astype(str).value_counts().to_dict()
+assert conteo == {"ligero": 3, "medio": 3, "pesado": 3}, f"Cada talla debe tener 3 crías: {conteo}"`,
+      },
+      {
+        name: "Tabla en porcentajes por turno",
         code: `${ref8}
 r = resolver(df.copy())
-assert list(r["datos"]["cuartil_peso"].astype(str)) == list(_ref(df.copy())["datos"]["cuartil_peso"].astype(str)), "Los cuartiles no coinciden; usa pd.qcut con 4 cuantiles"`,
-      },
-      {
-        name: "datos conserva todo lo demás",
-        code: `${ref8}
-check_frame(_norm_datos(resolver(df.copy())["datos"]), _norm_datos(_ref(df.copy())["datos"]))`,
-      },
-      {
-        name: "Tabla cruzada en orden de etapas",
-        code: `${ref8}
-t = resolver(df.copy())["tabla"]
-assert isinstance(t, pd.DataFrame), "tabla debe ser un DataFrame (usa pd.crosstab)"
-check_frame(_norm_tabla(t), _norm_tabla(_ref(df.copy())["tabla"]))`,
+t = r["tabla"]
+assert ((t.sum(axis=1) - 100).abs() <= 0.2).all(), f"Cada turno debe sumar 100 %: {t.sum(axis=1).to_dict()}"
+check_frame(_norm_tabla(t), _norm_tabla(_ref(df.copy())["tabla"]))
+check_frame(_norm_datos(r["datos"]), _norm_datos(_ref(df.copy())["datos"]))`,
       },
       {
         name: "Funciona con datos ocultos",
         code: `${ref8}
 otro = pd.DataFrame({
-    "panda": list("abcdefghij"),
-    "reserva": ["X", "Y", "Z", "X", "Y", "Z", "X", "Y", "Z", "X"],
-    "edad": [30, 1, 3, 10, 0, 14, 2, 5, 16, 4],
-    "peso_kg": [100.0, 12.0, 40.0, 80.0, 9.0, 95.0, 35.0, 60.0, 110.0, 50.0],
+    "cria": list("abcdef"),
+    "turno": ["noche", "noche", "tarde", "tarde", "noche", "tarde"],
+    "temperatura": [35.0, 38.49, 40.5, 37.0, 39.99, 36.99],
+    "peso_kg": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
 })
 r, e = resolver(otro.copy()), _ref(otro.copy())
-check_frame(_norm_datos(r["datos"]), _norm_datos(e["datos"]))
-check_frame(_norm_tabla(r["tabla"]), _norm_tabla(e["tabla"]))`,
+check_frame(_norm_tabla(r["tabla"]), _norm_tabla(e["tabla"]))
+check_frame(_norm_datos(r["datos"]), _norm_datos(e["datos"]))`,
       },
     ],
     tutorialLink: "agregacion",
@@ -786,8 +819,8 @@ def normalizar(df, col):
     return df.assign(**{col + "_norm": ((x - x.min()) / (x.max() - x.min())).round(3)})
 
 df = pd.DataFrame({
-    "panda": ["Mei", "Bao", "Lin", "Tao", "Yun", "Pei"],
-    "reserva": ["Chengdu", "Wolong", "Chengdu", "Ya'an", "Wolong", "Ya'an"],
+    "panda": ["Kiko", "Nube", "Lupe", "Tofu", "Sora", "Dango"],
+    "reserva": ["Foping", "Qinling", "Foping", "Baoxing", "Qinling", "Baoxing"],
     "kg_bambu": [12.0, 18.5, 9.0, 20.0, 15.0, 11.0],
     "horas_sueno": [10, 12, 7, 9, 11, 8],
 })`,
@@ -839,7 +872,7 @@ assert llamadas == ["kg_por_hora"], "Debes aplicar normalizar(…, 'kg_por_hora'
         name: "Filtra y ordena",
         code: `r = resolver(df.copy())
 assert list(r.columns) == ["panda", "reserva", "kg_por_hora", "kg_por_hora_norm"], f"Columnas: {list(r.columns)}"
-assert "Lin" not in list(r["panda"]), "Lin duerme menos de 8 horas y no debe aparecer"
+assert "Lupe" not in list(r["panda"]), "Lupe duerme menos de 8 horas y no debe aparecer"
 assert r["kg_por_hora_norm"].is_monotonic_decreasing, "Ordena de mayor a menor"`,
       },
       {
@@ -870,16 +903,16 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     topic: "Pipeline completo",
     description: `¡El reto del Maestro Panda! Tienes dos tablas:
 
-- \`df\`: registros de alimentación **sucios** con \`panda\`, \`fecha\` (texto), \`kg\` (texto) y \`reserva_id\`.
-- \`reservas\`: catálogo con \`reserva_id\` y \`reserva\` (nombre).
+- \`df\`: registros de alimentación **sucios** con \`panda\`, \`fecha\` (texto), \`kg\` (texto) y \`id_reserva\`.
+- \`reservas\`: catálogo con \`id_reserva\` y \`reserva\` (nombre).
 
 Completa \`resolver(df, reservas)\` siguiendo estos pasos **en orden**:
 
-1. **Texto**: limpia \`panda\` quitando espacios sobrantes y poniéndolo en formato título (\`" mEI "\` → \`"Mei"\`).
+1. **Texto**: limpia \`panda\` quitando espacios sobrantes y poniéndolo en formato título (\`" kIKO "\` → \`"Kiko"\`).
 2. **Números**: \`kg\` usa coma decimal (\`"12,5"\`) y tiene basura (\`"n/a"\`, \`""\`). Cambia la coma por punto, convierte a número (lo inválido → \`NaN\`) y **elimina** las filas sin kg.
 3. **Fechas**: convierte \`fecha\` a datetime.
 4. **Duplicados**: elimina filas duplicadas (ya limpias).
-5. **Merge**: une con \`reservas\` por \`reserva_id\` conservando todos los registros; si la reserva no existe, \`reserva = "Desconocida"\`.
+5. **Merge**: une con \`reservas\` por \`id_reserva\` conservando todos los registros; si la reserva no existe, \`reserva = "Desconocida"\`.
 6. **Agrupa** por \`reserva\` y \`panda\` con: \`total_kg\` (suma, redondeada a 2), \`dias\` (nº de fechas distintas) y \`ultima\` (fecha más reciente).
 7. **Ordena** por \`total_kg\` descendente y, en empate, por \`panda\` ascendente. Índice \`0, 1, 2, ...\`.
 
@@ -887,16 +920,16 @@ Columnas finales: \`["reserva", "panda", "total_kg", "dias", "ultima"]\`.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "panda": [" mei", "Bao ", "MEI", "lin", "Mei", "bao", "Tao", "lin ", "mei"],
+    "panda": [" kiko", "Nube ", "KIKO", "lupe", "Kiko", "nube", "Tofu", "lupe ", "kiko"],
     "fecha": ["2026-02-01", "2026-02-01", "2026-02-02", "2026-02-01", "2026-02-02",
               "2026-02-03", "2026-02-03", "2026-02-04", "2026-02-05"],
     "kg": ["12,5", "15", "10,25", "n/a", "10,25", "14,75", "9", "8,5", ""],
-    "reserva_id": [1, 2, 1, 1, 1, 2, 9, 1, 1],
+    "id_reserva": [1, 2, 1, 1, 1, 2, 9, 1, 1],
 })
 
 reservas = pd.DataFrame({
-    "reserva_id": [1, 2, 3],
-    "reserva": ["Chengdu", "Wolong", "Ya'an"],
+    "id_reserva": [1, 2, 3],
+    "reserva": ["Foping", "Qinling", "Baoxing"],
 })`,
     starterCode: `def resolver(df, reservas):
     # 1. texto  2. números  3. fechas  4. duplicados
@@ -913,7 +946,7 @@ resolver(df, reservas)`,
         )
         .dropna(subset=["kg"])
         .drop_duplicates()
-        .merge(reservas, on="reserva_id", how="left")
+        .merge(reservas, on="id_reserva", how="left")
         .fillna({"reserva": "Desconocida"})
     )
     resumen = (
@@ -941,20 +974,20 @@ assert list(r.columns) == ["reserva", "panda", "total_kg", "dias", "ultima"], f"
       {
         name: "Nombres de panda limpios",
         code: `r = resolver(df.copy(), reservas.copy())
-assert sorted(set(r["panda"])) == ["Bao", "Lin", "Mei", "Tao"], f"Pandas: {sorted(set(r['panda']))}"`,
+assert sorted(set(r["panda"])) == ["Kiko", "Lupe", "Nube", "Tofu"], f"Pandas: {sorted(set(r['panda']))}"`,
       },
       {
         name: "kg limpios y duplicados eliminados",
         code: `r = resolver(df.copy(), reservas.copy())
-mei = r[r["panda"] == "Mei"].iloc[0]
-assert abs(mei["total_kg"] - 22.75) < 1e-9, f"Mei debería sumar 22.75 kg (sin el duplicado ni el vacío) y suma {mei['total_kg']}"
-assert mei["dias"] == 2, f"Mei comió en 2 días distintos, no {mei['dias']}"`,
+kiko = r[r["panda"] == "Kiko"].iloc[0]
+assert abs(kiko["total_kg"] - 22.75) < 1e-9, f"Kiko debería sumar 22.75 kg (sin el duplicado ni el vacío) y suma {kiko['total_kg']}"
+assert kiko["dias"] == 2, f"Kiko comió en 2 días distintos, no {kiko['dias']}"`,
       },
       {
         name: "Reserva desconocida",
         code: `r = resolver(df.copy(), reservas.copy())
-tao = r[r["panda"] == "Tao"]
-assert len(tao) == 1 and tao.iloc[0]["reserva"] == "Desconocida", "Tao (reserva_id 9) debe quedar en 'Desconocida'"`,
+tofu = r[r["panda"] == "Tofu"]
+assert len(tofu) == 1 and tofu.iloc[0]["reserva"] == "Desconocida", "Tofu (id_reserva 9) debe quedar en 'Desconocida'"`,
       },
       {
         name: "ultima es una fecha",
@@ -970,12 +1003,12 @@ check_frame(resolver(df.copy(), reservas.copy()), _ref(df.copy(), reservas.copy(
         name: "Funciona con datos ocultos",
         code: `${ref10}
 otro = pd.DataFrame({
-    "panda": ["  ana", "ANA", "kai", "Kai ", "ana", "zhu", "pei", "Pei", "kai"],
+    "panda": ["  ana", "ANA", "kai", "Kai ", "ana", "zhu", "rui", "Rui", "kai"],
     "fecha": ["2025-07-01", "2025-07-01", "2025-07-02", "2025-07-02", "2025-07-09", "2025-07-03", "2025-07-04", "2025-07-05", "2025-07-02"],
     "kg": ["3,5", "3,5", "7", "7", "1,25", "x", "2", "8,75", "1"],
-    "reserva_id": [5, 5, 6, 6, 5, 6, 7, 7, 6],
+    "id_reserva": [5, 5, 6, 6, 5, 6, 7, 7, 6],
 })
-cat = pd.DataFrame({"reserva_id": [5, 6], "reserva": ["Foping", "Qinling"]})
+cat = pd.DataFrame({"id_reserva": [5, 6], "reserva": ["Laohegou", "Tangjiahe"]})
 check_frame(resolver(otro.copy(), cat.copy()), _ref(otro.copy(), cat.copy()))`,
       },
     ],

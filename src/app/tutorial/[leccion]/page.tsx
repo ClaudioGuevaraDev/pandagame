@@ -6,8 +6,9 @@ import { LESSONS, getLesson } from "@/content/tutorial";
 import { getChallengeById, challengeHref } from "@/content/challenges";
 import { Markdown } from "@/components/Markdown";
 import { RunnableSnippet } from "@/components/RunnableSnippet";
+import { ChallengeGuide } from "@/components/ChallengeGuide";
 import { TutorialNav } from "@/components/TutorialNav";
-import { KANJI_NUMERALS } from "@/lib/theme";
+import { moduleNumeral } from "@/lib/theme";
 import { LessonReadMarker } from "@/components/LessonReadMarker";
 import { JsonLd } from "@/components/JsonLd";
 import { absoluteUrl } from "@/lib/site";
@@ -63,9 +64,9 @@ export default async function LessonPage(props: PageProps<"/tutorial/[leccion]">
               className="font-display pointer-events-none absolute -top-4 right-0 text-[8rem] font-extrabold leading-none text-ink/[0.07]"
               aria-hidden="true"
             >
-              {KANJI_NUMERALS[lesson.module - 1]}
+              {moduleNumeral(lesson.module)}
             </span>
-            <p className="kicker text-seal-ink">Módulo {lesson.module}</p>
+            <p className="kicker text-seal-ink">{lesson.module === 0 ? "Introducción" : `Módulo ${lesson.module}`}</p>
             <h1 className="font-display mt-2 text-4xl font-extrabold leading-tight text-ink sm:text-5xl">
               {lesson.title}
             </h1>
@@ -78,6 +79,8 @@ export default async function LessonPage(props: PageProps<"/tutorial/[leccion]">
                 <Markdown key={i} className="my-4">
                   {b.content}
                 </Markdown>
+              ) : b.type === "guide" ? (
+                <ChallengeGuide key={i} />
               ) : (
                 <RunnableSnippet
                   key={i}

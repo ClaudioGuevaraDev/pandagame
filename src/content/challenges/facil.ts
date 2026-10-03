@@ -8,50 +8,77 @@ export const facil: Challenge[] = [
     title: "Primer brote",
     icon: "Sprout",
     topic: "Crear DataFrames",
-    description: `Un **DataFrame** es una tabla: filas y columnas con nombre. La forma más común de crearlo es a partir de un diccionario, donde cada clave es una columna y cada valor una lista.
+    description: `En la **guardería del santuario** cada cuidadora anota sus mediciones como **tuplas**: una por cría, con los valores en el mismo orden que una lista de nombres de columna.
 
-Crea un DataFrame llamado \`result\` con estas columnas y valores (en este orden):
+Completa \`resolver(registros, columnas)\` para que devuelva un **DataFrame** donde:
 
-| nombre | edad | comida |
-|---|---|---|
-| Mei | 4 | bambú |
-| Bao | 7 | manzana |
-| Lin | 2 | bambú |`,
-    setup: `import pandas as pd`,
+- cada tupla de \`registros\` es una **fila**,
+- las columnas se llaman como indica \`columnas\` (en ese orden),
+- la **primera columna** de \`columnas\` pasa a ser el **índice** de la tabla (deja de ser una columna normal).
+
+Por ejemplo, con \`columnas = ["cria", "altura_cm", "meses"]\` el índice serán los nombres de las crías y las columnas \`altura_cm\` y \`meses\`.
+
+> Los tests usan otros registros y otros nombres de columna: no escribas nada a mano.`,
+    setup: `import pandas as pd
+
+registros = [
+    ("Nube", 61, 7),
+    ("Kiwi", 58, 6),
+    ("Momo", 64, 8),
+    ("Pipo", 55, 5),
+]
+columnas = ["cria", "altura_cm", "meses"]`,
     starterCode: `import pandas as pd
 
-# Crea el DataFrame aquí
-result = None
-result`,
+def resolver(registros, columnas):
+    # Construye la tabla y usa la primera columna como índice
+    return None
+
+resolver(registros, columnas)`,
     solution: `import pandas as pd
 
-result = pd.DataFrame({
-    "nombre": ["Mei", "Bao", "Lin"],
-    "edad": [4, 7, 2],
-    "comida": ["bambú", "manzana", "bambú"],
-})
-result`,
+def resolver(registros, columnas):
+    tabla = pd.DataFrame(registros, columns=columnas)
+    return tabla.set_index(columnas[0])
+
+resolver(registros, columnas)`,
     hints: [
-      "Usa `pd.DataFrame({...})` pasándole un diccionario.",
-      'Cada clave es una columna: `{"nombre": [...], "edad": [...], ...}`.',
+      "`pd.DataFrame` también acepta una **lista de filas** (tuplas) junto con el parámetro `columns=` para nombrarlas.",
+      "Para convertir una columna en el índice existe `set_index`.",
+      "El nombre de la columna que va al índice es el primer elemento de `columnas`.",
     ],
     tests: [
       {
-        name: "result es un DataFrame",
-        code: `assert isinstance(result, pd.DataFrame), "result debe ser un DataFrame"`,
+        name: "Devuelve un DataFrame",
+        code: `r = resolver(list(registros), list(columnas))
+assert isinstance(r, pd.DataFrame), f"Se esperaba un DataFrame y se obtuvo {type(r).__name__}"`,
       },
       {
-        name: "Tiene las columnas correctas y en orden",
-        code: `assert list(result.columns) == ["nombre", "edad", "comida"], f"Columnas obtenidas: {list(result.columns)}"`,
+        name: "La primera columna es el índice",
+        code: `r = resolver(list(registros), list(columnas))
+assert r.index.name == "cria", f"El índice debería llamarse 'cria' y se llama {r.index.name!r}"
+assert list(r.index) == ["Nube", "Kiwi", "Momo", "Pipo"], f"Índice obtenido: {list(r.index)}"`,
       },
       {
-        name: "Tiene 3 filas",
-        code: `assert len(result) == 3, f"Se esperaban 3 filas y hay {len(result)}"`,
+        name: "Columnas restantes en orden con sus valores",
+        code: `r = resolver(list(registros), list(columnas))
+esperado = pd.DataFrame({"altura_cm": [61, 58, 64, 55], "meses": [7, 6, 8, 5]},
+                        index=pd.Index(["Nube", "Kiwi", "Momo", "Pipo"], name="cria"))
+check_frame(r, esperado)`,
       },
       {
-        name: "Los valores son correctos",
-        code: `expected = pd.DataFrame({"nombre": ["Mei", "Bao", "Lin"], "edad": [4, 7, 2], "comida": ["bambú", "manzana", "bambú"]})
-check_frame(result.reset_index(drop=True), expected)`,
+        name: "Funciona con otros registros y columnas",
+        code: `regs = [(101, "Tofu", 3.5), (102, "Yuzu", 2.8)]
+cols = ["ficha", "apodo", "kg"]
+r = resolver(regs, cols)
+esperado = pd.DataFrame({"apodo": ["Tofu", "Yuzu"], "kg": [3.5, 2.8]}, index=pd.Index([101, 102], name="ficha"))
+check_frame(r, esperado)`,
+      },
+      {
+        name: "Funciona con un solo registro",
+        code: `r = resolver([("Dango", 52, 4)], ["cria", "altura_cm", "meses"])
+assert len(r) == 1, f"Se esperaba 1 fila y hay {len(r)}"
+assert r.loc["Dango", "altura_cm"] == 52, "El valor de altura no coincide"`,
       },
     ],
     tutorialLink: "fundamentos",
@@ -63,73 +90,69 @@ check_frame(result.reset_index(drop=True), expected)`,
     title: "Ojos de panda",
     icon: "Eye",
     topic: "Explorar datos",
-    description: `Antes de analizar datos hay que mirarlos. Ya tienes un DataFrame \`df\` cargado con información de pandas de una reserva.
+    description: `La **tienda de souvenirs** del santuario tiene su inventario en un DataFrame \`df\`. Antes de hacer cuentas, la encargada quiere un vistazo rápido.
 
-Completa la función \`resolver(df)\` para que devuelva un **diccionario** con:
+Completa \`resolver(df)\` para que devuelva un **diccionario** con:
 
-- \`"filas"\`: número de filas (usa \`df.shape\`)
-- \`"columnas"\`: lista con los nombres de las columnas
-- \`"primeras"\`: un DataFrame con las **3 primeras filas** (usa \`head\`)
+- \`"n_productos"\`: cuántas filas tiene la tabla
+- \`"n_columnas"\`: cuántas columnas tiene (un número, no la lista)
+- \`"ultimos"\`: un DataFrame con las **2 últimas filas**
 
-> Los tests llamarán a tu función con otros DataFrames, así que no escribas los valores a mano.`,
+> Los tests usan otros inventarios: calcula todo a partir de \`df\`.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "nombre": ["Mei", "Bao", "Lin", "Tao", "Yun", "Pei"],
-    "edad": [4, 7, 2, 10, 5, 3],
-    "peso_kg": [80.5, 110.0, 45.2, 120.3, 95.1, 60.0],
-    "reserva": ["Chengdu", "Wolong", "Chengdu", "Ya'an", "Wolong", "Chengdu"],
+    "producto": ["Peluche", "Llavero", "Taza", "Postal", "Gorra"],
+    "stock": [12, 40, 25, 100, 8],
+    "precio": [15.0, 3.5, 7.9, 1.2, 11.0],
 })`,
     starterCode: `def resolver(df):
     return {
-        "filas": 0,
-        "columnas": [],
-        "primeras": None,
+        "n_productos": 0,
+        "n_columnas": 0,
+        "ultimos": None,
     }
 
 resolver(df)`,
     solution: `def resolver(df):
+    filas, columnas = df.shape
     return {
-        "filas": df.shape[0],
-        "columnas": list(df.columns),
-        "primeras": df.head(3),
+        "n_productos": filas,
+        "n_columnas": columnas,
+        "ultimos": df.tail(2),
     }
 
 resolver(df)`,
     hints: [
-      "`df.shape` devuelve una tupla `(filas, columnas)`.",
-      "`list(df.columns)` convierte las columnas en una lista.",
-      "`df.head(3)` devuelve las 3 primeras filas.",
+      "`df.shape` es una tupla con dos números: filas y columnas.",
+      "Igual que `head` muestra el principio, hay un método que muestra el final.",
     ],
     tests: [
       {
         name: "Devuelve un diccionario con las claves pedidas",
         code: `r = resolver(df.copy())
 assert isinstance(r, dict), "resolver debe devolver un diccionario"
-assert set(r) >= {"filas", "columnas", "primeras"}, f"Faltan claves: {set(['filas','columnas','primeras']) - set(r)}"`,
+faltan = {"n_productos", "n_columnas", "ultimos"} - set(r)
+assert not faltan, f"Faltan claves: {faltan}"`,
       },
       {
-        name: "Cuenta bien las filas",
+        name: "Cuenta productos y columnas",
         code: `r = resolver(df.copy())
-assert r["filas"] == 6, f"Se esperaban 6 filas y se obtuvo {r['filas']}"`,
+assert r["n_productos"] == 5, f"Se esperaban 5 productos y se obtuvo {r['n_productos']}"
+assert r["n_columnas"] == 3, f"Se esperaban 3 columnas y se obtuvo {r['n_columnas']}"`,
       },
       {
-        name: "Lista las columnas",
+        name: "Devuelve las 2 últimas filas",
         code: `r = resolver(df.copy())
-assert list(r["columnas"]) == ["nombre", "edad", "peso_kg", "reserva"], f"Obtenido: {r['columnas']}"`,
+check_frame(r["ultimos"], df.iloc[-2:])`,
       },
       {
-        name: "Devuelve las 3 primeras filas",
-        code: `r = resolver(df.copy())
-check_frame(r["primeras"], df.iloc[:3])`,
-      },
-      {
-        name: "Funciona con otros datos",
-        code: `otro = pd.DataFrame({"a": range(10), "b": list("abcdefghij")})
+        name: "Funciona con otro inventario",
+        code: `otro = pd.DataFrame({"a": range(7), "b": list("abcdefg"), "c": [0.5] * 7, "d": [True] * 7})
 r = resolver(otro)
-assert r["filas"] == 10, "No funciona con un DataFrame de 10 filas"
-assert list(r["columnas"]) == ["a", "b"]
-check_frame(r["primeras"], otro.iloc[:3])`,
+assert r["n_productos"] == 7, "No cuenta bien las filas de otro inventario"
+assert r["n_columnas"] == 4, "No cuenta bien las columnas de otro inventario"
+check_frame(r["ultimos"], otro.iloc[-2:])`,
       },
     ],
     tutorialLink: "fundamentos",
@@ -141,50 +164,69 @@ check_frame(r["primeras"], otro.iloc[:3])`,
     title: "Selector",
     icon: "Columns3",
     topic: "Seleccionar columnas",
-    description: `A veces solo necesitas algunas columnas. Con doble corchete \`df[["a", "b"]]\` obtienes un nuevo DataFrame solo con esas columnas, **en el orden que indiques**.
+    description: `El registro de **visitas al santuario** guarda muchos datos por visitante. Hay columnas de gasto (\`gasto_...\`), de horarios (\`hora_...\`) y otras.
 
-Completa \`resolver(df)\` para que devuelva un DataFrame con **solo** las columnas \`nombre\` y \`peso_kg\`, en ese orden. Conserva el índice original.`,
+Completa \`resolver(df, prefijo)\` para que devuelva un DataFrame con:
+
+1. la **primera columna** de \`df\` (el identificador del visitante), y a continuación
+2. **todas las columnas cuyo nombre empiece por \`prefijo\`**, en el mismo orden en que aparecen en \`df\`.
+
+Por ejemplo, con \`prefijo = "gasto_"\` el resultado tiene \`visitante\`, \`gasto_entrada\`, \`gasto_tienda\` y \`gasto_comida\`.
+
+> Los tests usan otros prefijos y otras tablas (con otro identificador): no escribas los nombres a mano.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "nombre": ["Mei", "Bao", "Lin", "Tao", "Yun"],
-    "edad": [4, 7, 2, 10, 5],
-    "peso_kg": [80.5, 110.0, 45.2, 120.3, 95.1],
-    "reserva": ["Chengdu", "Wolong", "Chengdu", "Ya'an", "Wolong"],
-})`,
-    starterCode: `def resolver(df):
-    # Devuelve solo las columnas nombre y peso_kg
+    "visitante": ["Ana", "Joaquín", "Sofía", "Iker"],
+    "pais": ["Chile", "España", "México", "Perú"],
+    "gasto_entrada": [12, 12, 8, 12],
+    "hora_llegada": ["10:00", "11:30", "12:15", "15:45"],
+    "gasto_tienda": [25, 0, 14, 40],
+    "grupo": [2, 5, 1, 3],
+    "gasto_comida": [9, 18, 0, 11],
+    "hora_salida": ["12:30", "14:00", "13:05", "17:20"],
+})
+prefijo = "gasto_"`,
+    starterCode: `def resolver(df, prefijo):
     return df
 
-resolver(df)`,
-    solution: `def resolver(df):
-    return df[["nombre", "peso_kg"]]
+resolver(df, prefijo)`,
+    solution: `def resolver(df, prefijo):
+    elegidas = [c for c in df.columns if c.startswith(prefijo)]
+    return df[[df.columns[0]] + elegidas]
 
-resolver(df)`,
+resolver(df, prefijo)`,
     hints: [
-      "Para seleccionar varias columnas pasa una **lista** dentro de los corchetes.",
-      'Fíjate en los dobles corchetes: `df[["nombre", "peso_kg"]]`.',
+      "`df.columns` es la lista de nombres de columna: puedes recorrerla y quedarte con las que te sirvan.",
+      "Los textos tienen el método `startswith` para saber si empiezan por algo.",
+      "Arma una lista con la primera columna seguida de las elegidas y úsala dentro de `df[...]`.",
     ],
     tests: [
       {
         name: "Devuelve un DataFrame",
-        code: `r = resolver(df.copy())
-assert isinstance(r, pd.DataFrame), "resolver debe devolver un DataFrame (¿usaste doble corchete?)"`,
+        code: `r = resolver(df.copy(), "gasto_")
+assert isinstance(r, pd.DataFrame), f"Se esperaba un DataFrame y se obtuvo {type(r).__name__}"`,
       },
       {
-        name: "Tiene solo las columnas nombre y peso_kg, en orden",
-        code: `r = resolver(df.copy())
-assert list(r.columns) == ["nombre", "peso_kg"], f"Columnas obtenidas: {list(r.columns)}"`,
+        name: "Identificador primero y columnas con el prefijo en orden",
+        code: `r = resolver(df.copy(), "gasto_")
+assert list(r.columns) == ["visitante", "gasto_entrada", "gasto_tienda", "gasto_comida"], f"Columnas obtenidas: {list(r.columns)}"`,
       },
       {
-        name: "Conserva todas las filas y valores",
-        code: `r = resolver(df.copy())
-check_frame(r, df[["nombre", "peso_kg"]])`,
+        name: "Funciona con otro prefijo",
+        code: `r = resolver(df.copy(), "hora_")
+check_frame(r, df[["visitante", "hora_llegada", "hora_salida"]])`,
       },
       {
-        name: "Funciona con otros datos",
-        code: `otro = pd.DataFrame({"id": [1, 2], "peso_kg": [70.0, 99.9], "nombre": ["Hua", "Ling"], "zona": ["N", "S"]})
-check_frame(resolver(otro.copy()), otro[["nombre", "peso_kg"]])`,
+        name: "Si ninguna columna coincide, queda solo el identificador",
+        code: `r = resolver(df.copy(), "xyz_")
+assert list(r.columns) == ["visitante"], f"Columnas obtenidas: {list(r.columns)}"
+assert len(r) == len(df), "No debe perder filas"`,
+      },
+      {
+        name: "Funciona con otra tabla y otro identificador",
+        code: `otro = pd.DataFrame({"ticket": [1, 2], "kg_bambu": [3, 4], "nota": ["a", "b"], "kg_fruta": [5, 6]})
+check_frame(resolver(otro, "kg_"), otro[["ticket", "kg_bambu", "kg_fruta"]])`,
       },
     ],
     tutorialLink: "seleccion",
@@ -196,50 +238,61 @@ check_frame(resolver(otro.copy()), otro[["nombre", "peso_kg"]])`,
     title: "Filtro de hojas",
     icon: "Filter",
     topic: "Filtrar filas",
-    description: `Para quedarte con algunas filas usa una **máscara booleana**: una condición como \`df["edad"] > 3\` devuelve \`True\`/\`False\` por fila, y \`df[mascara]\` se queda con las filas \`True\`.
+    description: `En la **guardería**, las cuidadoras registran cuántos minutos jugó cada cría hoy. Quieren saber qué crías jugaron **más que el promedio** del grupo.
 
-Completa \`resolver(df)\` para que devuelva las filas de los pandas que pesan **más de 90 kg** (estrictamente mayor). Conserva todas las columnas y el **índice original** (no lo reinicies).`,
+Completa \`resolver(df)\` para que devuelva las filas cuyo \`minutos_juego\` sea **estrictamente mayor que la media** de esa columna, con todas sus columnas y el índice reiniciado (\`0, 1, 2…\`).
+
+> La media cambia con los datos: calcúlala dentro de la función.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "nombre": ["Mei", "Bao", "Lin", "Tao", "Yun", "Pei"],
-    "edad": [4, 7, 2, 10, 5, 3],
-    "peso_kg": [80.5, 110.0, 45.2, 120.3, 95.1, 90.0],
+    "cria": ["Nube", "Kiwi", "Momo", "Pipo", "Lulú"],
+    "minutos_juego": [45, 80, 30, 95, 50],
+    "siesta_min": [120, 90, 150, 60, 110],
 })`,
     starterCode: `def resolver(df):
-    # Filtra los pandas de más de 90 kg
     return df
 
 resolver(df)`,
     solution: `def resolver(df):
-    return df[df["peso_kg"] > 90]
+    media = df["minutos_juego"].mean()
+    activas = df[df["minutos_juego"] > media]
+    return activas.reset_index(drop=True)
 
 resolver(df)`,
     hints: [
-      'Primero crea la condición: `df["peso_kg"] > 90`.',
-      "Luego úsala dentro de los corchetes: `df[condicion]`.",
+      "Primero calcula la media de la columna `minutos_juego` con `.mean()`.",
+      "Compara la columna con esa media para obtener una máscara de `True`/`False` y úsala dentro de `df[...]`.",
+      "Termina con `.reset_index(drop=True)` para renumerar las filas.",
     ],
     tests: [
       {
         name: "Devuelve un DataFrame",
         code: `r = resolver(df.copy())
-assert isinstance(r, pd.DataFrame), "resolver debe devolver un DataFrame"`,
+assert isinstance(r, pd.DataFrame), f"Se esperaba un DataFrame y se obtuvo {type(r).__name__}"`,
       },
       {
-        name: "Todos los pandas pesan más de 90 kg",
+        name: "Solo crías por encima de la media",
         code: `r = resolver(df.copy())
-assert (r["peso_kg"] > 90).all(), "Hay filas con 90 kg o menos"`,
+assert sorted(r["cria"]) == ["Kiwi", "Pipo"], f"Crías obtenidas: {list(r['cria'])}"`,
       },
       {
-        name: "No falta ningún panda (90 kg exactos no cuenta)",
+        name: "Mantiene todas las columnas y reinicia el índice",
         code: `r = resolver(df.copy())
-assert len(r) == 3, f"Se esperaban 3 filas y hay {len(r)}"
-check_frame(r, df[df["peso_kg"] > 90])`,
+esperado = pd.DataFrame({"cria": ["Kiwi", "Pipo"], "minutos_juego": [80, 95], "siesta_min": [90, 60]})
+check_frame(r, esperado)`,
       },
       {
         name: "Funciona con otros datos",
-        code: `otro = pd.DataFrame({"nombre": ["A", "B", "C", "D"], "peso_kg": [91.0, 89.0, 150.0, 90.0]}, index=[10, 20, 30, 40])
-check_frame(resolver(otro.copy()), otro.loc[[10, 30]])`,
+        code: `otro = pd.DataFrame({"cria": ["A", "B", "C", "D"], "minutos_juego": [10, 10, 10, 50], "siesta_min": [1, 2, 3, 4]})
+r = resolver(otro)
+check_frame(r, otro.iloc[[3]].reset_index(drop=True))`,
+      },
+      {
+        name: "Si todas jugaron igual, no devuelve ninguna",
+        code: `igual = pd.DataFrame({"cria": ["A", "B"], "minutos_juego": [20, 20], "siesta_min": [5, 5]})
+r = resolver(igual)
+assert len(r) == 0, f"Ninguna supera la media, pero se obtuvieron {len(r)} filas"`,
       },
     ],
     tutorialLink: "seleccion",
@@ -251,55 +304,65 @@ check_frame(resolver(otro.copy()), otro.loc[[10, 30]])`,
     title: "Doble filtro",
     icon: "ListFilter",
     topic: "Combinar condiciones",
-    description: `Puedes combinar condiciones con \`&\` (y), \`|\` (o) y \`~\` (no). ¡Cada condición va **entre paréntesis**! Para comprobar si un valor está en una lista usa \`.isin([...])\`.
+    description: `La **clínica veterinaria** del santuario quiere avisar a los pacientes que necesitan revisión.
 
-Completa \`resolver(df)\` para que devuelva los pandas que viven en **Chengdu o Wolong** **y** que tienen **5 años o más**. Conserva todas las columnas y el índice original.`,
+Completa \`resolver(df, areas)\` para que devuelva los pacientes que cumplan **las dos** condiciones:
+
+1. su \`area\` está en la lista \`areas\`, **y**
+2. tienen fiebre (\`temperatura\` **mayor o igual** a \`38.5\`) **o** están marcados como \`urgente\`.
+
+Devuelve todas las columnas con el índice reiniciado.
+
+> Necesitarás \`&\`, \`|\`, \`isin\` y paréntesis alrededor de cada condición.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "nombre": ["Mei", "Bao", "Lin", "Tao", "Yun", "Pei", "Xiu"],
-    "edad": [4, 7, 12, 10, 5, 3, 8],
-    "reserva": ["Chengdu", "Wolong", "Chengdu", "Ya'an", "Wolong", "Chengdu", "Foping"],
-})`,
-    starterCode: `def resolver(df):
-    # Reserva Chengdu o Wolong, y edad >= 5
+    "paciente": ["Taro", "Sésamo", "Bruma", "Coco", "Ámbar", "Tofu"],
+    "area": ["Bosque Alto", "Valle Niebla", "Bosque Alto", "Río Jade", "Valle Niebla", "Río Jade"],
+    "temperatura": [38.9, 37.8, 37.5, 39.1, 38.5, 37.2],
+    "urgente": [False, True, False, False, False, True],
+})
+areas = ["Bosque Alto", "Valle Niebla"]`,
+    starterCode: `def resolver(df, areas):
     return df
 
-resolver(df)`,
-    solution: `def resolver(df):
-    return df[df["reserva"].isin(["Chengdu", "Wolong"]) & (df["edad"] >= 5)]
+resolver(df, areas)`,
+    solution: `def resolver(df, areas):
+    en_area = df["area"].isin(areas)
+    revisar = (df["temperatura"] >= 38.5) | df["urgente"]
+    return df[en_area & revisar].reset_index(drop=True)
 
-resolver(df)`,
+resolver(df, areas)`,
     hints: [
-      '`df["reserva"].isin(["Chengdu", "Wolong"])` te da la primera condición.',
-      'La segunda es `(df["edad"] >= 5)`. Combínalas con `&`.',
-      "Recuerda los paréntesis alrededor de cada comparación: `(a) & (b)`.",
+      "`df[\"area\"].isin(areas)` te dice qué filas están en alguna de las áreas.",
+      "Combina condiciones con `&` (y) y `|` (o), y pon cada una entre paréntesis.",
     ],
     tests: [
       {
         name: "Devuelve un DataFrame",
-        code: `r = resolver(df.copy())
-assert isinstance(r, pd.DataFrame), "resolver debe devolver un DataFrame"`,
+        code: `r = resolver(df.copy(), ["Bosque Alto", "Valle Niebla"])
+assert isinstance(r, pd.DataFrame), f"Se esperaba un DataFrame y se obtuvo {type(r).__name__}"`,
       },
       {
-        name: "Solo hay pandas de Chengdu o Wolong",
-        code: `r = resolver(df.copy())
-assert r["reserva"].isin(["Chengdu", "Wolong"]).all(), f"Reservas encontradas: {sorted(set(r['reserva']))}"`,
+        name: "Selecciona los pacientes correctos",
+        code: `r = resolver(df.copy(), ["Bosque Alto", "Valle Niebla"])
+assert list(r["paciente"]) == ["Taro", "Sésamo", "Ámbar"], f"Pacientes obtenidos: {list(r['paciente'])}"`,
       },
       {
-        name: "Todos tienen 5 años o más",
-        code: `r = resolver(df.copy())
-assert (r["edad"] >= 5).all(), "Hay pandas menores de 5 años"`,
+        name: "Respeta la lista de áreas",
+        code: `r = resolver(df.copy(), ["Río Jade"])
+assert list(r["paciente"]) == ["Coco", "Tofu"], f"Pacientes obtenidos: {list(r['paciente'])}"`,
       },
       {
-        name: "Son exactamente los pandas esperados",
-        code: `r = resolver(df.copy())
-check_frame(r, df.loc[[1, 2, 4]])`,
+        name: "Mantiene columnas e índice reiniciado",
+        code: `r = resolver(df.copy(), ["Bosque Alto", "Valle Niebla"])
+check_frame(r, df.iloc[[0, 1, 4]].reset_index(drop=True))`,
       },
       {
         name: "Funciona con otros datos",
-        code: `otro = pd.DataFrame({"nombre": list("abcde"), "edad": [5, 4, 9, 20, 6], "reserva": ["Wolong", "Wolong", "Ya'an", "Chengdu", "Foping"]})
-check_frame(resolver(otro.copy()), otro.loc[[0, 3]])`,
+        code: `otro = pd.DataFrame({"paciente": ["a", "b", "c"], "area": ["X", "Y", "X"], "temperatura": [40.0, 40.0, 36.0], "urgente": [False, False, False]})
+r = resolver(otro, ["X"])
+assert list(r["paciente"]) == ["a"], f"Pacientes obtenidos: {list(r['paciente'])}"`,
       },
     ],
     tutorialLink: "seleccion",
@@ -311,51 +374,67 @@ check_frame(resolver(otro.copy()), otro.loc[[0, 3]])`,
     title: "En orden",
     icon: "ArrowDownWideNarrow",
     topic: "Ordenar",
-    description: `\`sort_values\` ordena un DataFrame por una o varias columnas. Con \`ascending=False\` el orden es de mayor a menor.
+    description: `Terminó el **torneo de trepar árboles**. Los participantes compiten en categorías (\`cria\`, \`juvenil\`, \`adulto\`) y el jurado quiere publicar la tabla agrupada por categoría, **en el orden que ellos eligen**, que no es el alfabético.
 
-Completa \`resolver(df)\` para que devuelva el DataFrame ordenado por \`peso_kg\` de **mayor a menor**. Después **reinicia el índice** para que vaya de 0 a n-1 (sin conservar el índice viejo como columna).`,
+Completa \`resolver(df, orden)\` para que devuelva la tabla:
+
+- ordenada por \`categoria\` según la posición de cada categoría en la lista \`orden\` (la primera de la lista va arriba),
+- dentro de cada categoría, por \`puntos\` de **mayor a menor**,
+- con las **mismas columnas** que \`df\` (sin columnas auxiliares) y el **índice reiniciado**.
+
+> La lista \`orden\` cambia en cada test.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "nombre": ["Mei", "Bao", "Lin", "Tao", "Yun"],
-    "edad": [4, 7, 2, 10, 5],
-    "peso_kg": [80.5, 110.0, 45.2, 120.3, 95.1],
-})`,
-    starterCode: `def resolver(df):
-    # Ordena por peso_kg de mayor a menor y reinicia el índice
+    "participante": ["Yuzu", "Mochi", "Dango", "Nori", "Brisa", "Copo"],
+    "categoria": ["adulto", "cria", "juvenil", "cria", "adulto", "juvenil"],
+    "puntos": [72, 90, 85, 78, 60, 88],
+})
+orden = ["juvenil", "cria", "adulto"]`,
+    starterCode: `def resolver(df, orden):
     return df
 
-resolver(df)`,
-    solution: `def resolver(df):
-    return df.sort_values("peso_kg", ascending=False).reset_index(drop=True)
+resolver(df, orden)`,
+    solution: `def resolver(df, orden):
+    posicion = {cat: i for i, cat in enumerate(orden)}
+    tabla = df.assign(pos=df["categoria"].map(posicion))
+    tabla = tabla.sort_values(["pos", "puntos"], ascending=[True, False])
+    return tabla.drop(columns="pos").reset_index(drop=True)
 
-resolver(df)`,
+resolver(df, orden)`,
     hints: [
-      '`df.sort_values("peso_kg", ascending=False)` ordena de mayor a menor.',
-      "`.reset_index(drop=True)` reinicia el índice sin crear una columna nueva.",
+      "Ordenar por `categoria` directamente la pondría en orden alfabético. Necesitas un valor numérico que represente la posición de cada categoría en `orden`.",
+      "Puedes crear un diccionario categoría → posición y aplicarlo con `map` en una columna auxiliar.",
+      "Ordena por esa columna auxiliar y por `puntos` (con direcciones distintas), y luego elimínala.",
     ],
     tests: [
       {
-        name: "Devuelve un DataFrame con las mismas columnas",
-        code: `r = resolver(df.copy())
-assert isinstance(r, pd.DataFrame), "resolver debe devolver un DataFrame"
-assert list(r.columns) == list(df.columns), f"Columnas obtenidas: {list(r.columns)} (¿olvidaste drop=True?)"`,
+        name: "Devuelve todas las filas con las mismas columnas",
+        code: `r = resolver(df.copy(), ["juvenil", "cria", "adulto"])
+assert isinstance(r, pd.DataFrame), f"Se esperaba un DataFrame y se obtuvo {type(r).__name__}"
+assert list(r.columns) == list(df.columns), f"Columnas obtenidas: {list(r.columns)}"
+assert len(r) == len(df), f"Se esperaban {len(df)} filas y hay {len(r)}"`,
       },
       {
-        name: "Está ordenado de mayor a menor peso",
-        code: `r = resolver(df.copy())
-assert r["peso_kg"].is_monotonic_decreasing, "peso_kg no está ordenado de mayor a menor"`,
+        name: "Orden de categorías según la lista y puntos de mayor a menor",
+        code: `r = resolver(df.copy(), ["juvenil", "cria", "adulto"])
+assert list(r["participante"]) == ["Copo", "Dango", "Mochi", "Nori", "Yuzu", "Brisa"], f"Orden obtenido: {list(r['participante'])}"`,
       },
       {
-        name: "El índice va de 0 a n-1",
-        code: `r = resolver(df.copy())
+        name: "Respeta otra lista de orden",
+        code: `r = resolver(df.copy(), ["adulto", "juvenil", "cria"])
+assert list(r["participante"]) == ["Yuzu", "Brisa", "Copo", "Dango", "Mochi", "Nori"], f"Orden obtenido: {list(r['participante'])}"`,
+      },
+      {
+        name: "Índice reiniciado",
+        code: `r = resolver(df.copy(), ["cria", "juvenil", "adulto"])
 assert list(r.index) == list(range(len(df))), f"Índice obtenido: {list(r.index)}"`,
       },
       {
         name: "Funciona con otros datos",
-        code: `otro = pd.DataFrame({"nombre": ["a", "b", "c", "d"], "peso_kg": [10.0, 300.0, 55.5, 70.0]})
-esperado = pd.DataFrame({"nombre": ["b", "d", "c", "a"], "peso_kg": [300.0, 70.0, 55.5, 10.0]})
-check_frame(resolver(otro.copy()), esperado)`,
+        code: `otro = pd.DataFrame({"participante": ["a", "b", "c", "d"], "categoria": ["oro", "plata", "oro", "bronce"], "puntos": [1, 9, 5, 3]})
+r = resolver(otro, ["bronce", "oro", "plata"])
+assert list(r["participante"]) == ["d", "c", "a", "b"], f"Orden obtenido: {list(r['participante'])}"`,
       },
     ],
     tutorialLink: "transformacion",
@@ -367,54 +446,60 @@ check_frame(resolver(otro.copy()), esperado)`,
     title: "Nueva rama",
     icon: "GitBranchPlus",
     topic: "Columnas calculadas",
-    description: `Puedes crear columnas nuevas a partir de otras con operaciones vectorizadas: \`df["c"] = df["a"] / df["b"]\` calcula fila a fila sin bucles.
+    description: `El **inventario de bambú** anota cuántos tallos hay de cada variedad, cuántos kilos pesa cada tallo y el precio por kilo.
 
-Completa \`resolver(df)\` para que devuelva el DataFrame con una **nueva columna al final** llamada \`bambu_por_kg\`: los kilos de bambú que come al día (\`bambu_kg\`) divididos entre su peso (\`peso_kg\`), **redondeado a 3 decimales**.`,
+Completa \`resolver(df)\` para que devuelva el DataFrame con **dos columnas nuevas** al final:
+
+- \`"kg_totales"\`: \`tallos × kg_por_tallo\`
+- \`"valor"\`: \`kg_totales × precio_kg\`, **redondeado a 2 decimales**
+
+Las columnas originales deben quedar igual.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "nombre": ["Mei", "Bao", "Lin", "Tao"],
-    "peso_kg": [80.5, 110.0, 45.2, 120.3],
-    "bambu_kg": [12.0, 18.5, 6.3, 20.1],
+    "variedad": ["Gigante", "Dorado", "Negro", "Enano"],
+    "tallos": [12, 30, 8, 50],
+    "kg_por_tallo": [2.5, 0.8, 3.1, 0.3],
+    "precio_kg": [1.20, 2.75, 3.40, 0.95],
 })`,
     starterCode: `def resolver(df):
-    # Crea la columna bambu_por_kg
     return df
 
 resolver(df)`,
     solution: `def resolver(df):
     df = df.copy()
-    df["bambu_por_kg"] = (df["bambu_kg"] / df["peso_kg"]).round(3)
+    df["kg_totales"] = df["tallos"] * df["kg_por_tallo"]
+    df["valor"] = (df["kg_totales"] * df["precio_kg"]).round(2)
     return df
 
 resolver(df)`,
     hints: [
-      'Divide dos columnas directamente: `df["bambu_kg"] / df["peso_kg"]`.',
-      "Usa `.round(3)` sobre el resultado.",
-      'Asigna con `df["bambu_por_kg"] = ...` (o usa `df.assign(...)`).',
+      "Puedes crear una columna asignando una operación entre columnas: `df[\"nueva\"] = ...`.",
+      "La segunda columna puede usar la primera que acabas de crear.",
+      "`.round(2)` redondea a dos decimales.",
     ],
     tests: [
       {
-        name: "Existe la columna bambu_por_kg al final",
+        name: "Agrega las dos columnas al final",
         code: `r = resolver(df.copy())
-assert isinstance(r, pd.DataFrame), "resolver debe devolver un DataFrame"
-assert list(r.columns) == ["nombre", "peso_kg", "bambu_kg", "bambu_por_kg"], f"Columnas obtenidas: {list(r.columns)}"`,
+assert list(r.columns) == ["variedad", "tallos", "kg_por_tallo", "precio_kg", "kg_totales", "valor"], f"Columnas: {list(r.columns)}"`,
       },
       {
-        name: "Los valores están bien calculados",
+        name: "kg_totales es correcto",
         code: `r = resolver(df.copy())
-check_series(r["bambu_por_kg"], (df["bambu_kg"] / df["peso_kg"]).round(3), check_names=False)`,
+check_series(r["kg_totales"], pd.Series([30.0, 24.0, 24.8, 15.0], name="kg_totales"), atol=1e-9)`,
       },
       {
-        name: "Está redondeado a 3 decimales",
+        name: "valor es correcto y está redondeado",
         code: `r = resolver(df.copy())
-assert (r["bambu_por_kg"] == r["bambu_por_kg"].round(3)).all(), "Los valores no están redondeados a 3 decimales"`,
+check_series(r["valor"], pd.Series([36.0, 66.0, 84.32, 14.25], name="valor"), atol=1e-9)`,
       },
       {
         name: "Funciona con otros datos",
-        code: `otro = pd.DataFrame({"nombre": ["x", "y"], "peso_kg": [100.0, 3.0], "bambu_kg": [10.0, 1.0]})
-esperado = otro.assign(bambu_por_kg=[0.1, 0.333])
-check_frame(resolver(otro.copy()), esperado)`,
+        code: `otro = pd.DataFrame({"variedad": ["x"], "tallos": [3], "kg_por_tallo": [1.111], "precio_kg": [3.0]})
+r = resolver(otro)
+assert abs(r["kg_totales"].iloc[0] - 3.333) < 1e-9, "kg_totales incorrecto"
+assert r["valor"].iloc[0] == 10.0, f"valor obtenido: {r['valor'].iloc[0]}"`,
       },
     ],
     tutorialLink: "transformacion",
@@ -426,59 +511,60 @@ check_frame(resolver(otro.copy()), esperado)`,
     title: "Renombrar",
     icon: "PencilLine",
     topic: "rename y drop",
-    description: `Los datos reales suelen venir con nombres feos. \`df.rename(columns={"viejo": "nuevo"})\` cambia nombres de columnas y \`df.drop(columns=[...])\` elimina columnas.
+    description: `El sistema de la **tienda de souvenirs** exporta el registro de ventas con nombres abreviados y algunas columnas internas que empiezan con \`"tmp_"\`.
 
-Completa \`resolver(df)\` para que:
+Completa \`resolver(df)\` para que devuelva el DataFrame:
 
-1. Renombre \`nom\` → \`nombre\` y \`kg\` → \`peso_kg\`.
-2. Elimine la columna \`id_interno\`.
+1. **sin ninguna columna cuyo nombre empiece por \`"tmp_"\`** (pueden ser distintas en cada test),
+2. con \`"prod"\` renombrada a \`"producto"\` y \`"cant"\` renombrada a \`"cantidad"\`.
 
-El resto de columnas debe quedar igual y en el mismo orden.`,
+El resto de columnas se mantiene en su orden.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "id_interno": [101, 102, 103],
-    "nom": ["Mei", "Bao", "Lin"],
-    "kg": [80.5, 110.0, 45.2],
-    "reserva": ["Chengdu", "Wolong", "Chengdu"],
+    "prod": ["Peluche", "Taza", "Gorra"],
+    "tmp_id": [901, 902, 903],
+    "cant": [2, 1, 4],
+    "total": [30.0, 7.9, 44.0],
+    "tmp_caja": ["C1", "C2", "C1"],
 })`,
     starterCode: `def resolver(df):
-    # Renombra nom y kg, y elimina id_interno
     return df
 
 resolver(df)`,
     solution: `def resolver(df):
-    return df.rename(columns={"nom": "nombre", "kg": "peso_kg"}).drop(columns=["id_interno"])
+    internas = [c for c in df.columns if c.startswith("tmp_")]
+    limpio = df.drop(columns=internas)
+    return limpio.rename(columns={"prod": "producto", "cant": "cantidad"})
 
 resolver(df)`,
     hints: [
-      '`df.rename(columns={"nom": "nombre", "kg": "peso_kg"})` devuelve un DataFrame nuevo.',
-      'Encadena `.drop(columns=["id_interno"])` al resultado.',
+      "Recorre `df.columns` y quédate con los nombres que empiezan por `\"tmp_\"` (`str.startswith`).",
+      "`drop(columns=...)` acepta una lista de columnas.",
+      "`rename(columns={...})` usa un diccionario de nombre viejo a nombre nuevo.",
     ],
     tests: [
       {
-        name: "Las columnas están renombradas",
+        name: "Elimina las columnas tmp_",
         code: `r = resolver(df.copy())
-assert isinstance(r, pd.DataFrame), "resolver debe devolver un DataFrame"
-assert "nombre" in r.columns and "peso_kg" in r.columns, f"Columnas obtenidas: {list(r.columns)}"
-assert "nom" not in r.columns and "kg" not in r.columns, "Aún quedan los nombres viejos"`,
+assert not any(c.startswith("tmp_") for c in r.columns), f"Quedan columnas internas: {list(r.columns)}"`,
       },
       {
-        name: "Ya no existe id_interno",
+        name: "Renombra prod y cant",
         code: `r = resolver(df.copy())
-assert "id_interno" not in r.columns, "La columna id_interno sigue ahí"`,
+assert list(r.columns) == ["producto", "cantidad", "total"], f"Columnas: {list(r.columns)}"`,
       },
       {
-        name: "Columnas en el orden correcto y valores intactos",
+        name: "Los valores no cambian",
         code: `r = resolver(df.copy())
-esperado = pd.DataFrame({"nombre": ["Mei", "Bao", "Lin"], "peso_kg": [80.5, 110.0, 45.2], "reserva": ["Chengdu", "Wolong", "Chengdu"]})
+esperado = pd.DataFrame({"producto": ["Peluche", "Taza", "Gorra"], "cantidad": [2, 1, 4], "total": [30.0, 7.9, 44.0]})
 check_frame(r, esperado)`,
       },
       {
-        name: "Funciona con otros datos",
-        code: `otro = pd.DataFrame({"kg": [1.0], "id_interno": [9], "zona": ["N"], "nom": ["Hua"]})
-esperado = pd.DataFrame({"peso_kg": [1.0], "zona": ["N"], "nombre": ["Hua"]})
-check_frame(resolver(otro.copy()), esperado)`,
+        name: "Funciona con otras columnas internas",
+        code: `otro = pd.DataFrame({"tmp_a": [1], "prod": ["Postal"], "tmp_b": [2], "cant": [9], "tmp_c": [3]})
+r = resolver(otro)
+assert list(r.columns) == ["producto", "cantidad"], f"Columnas: {list(r.columns)}"`,
       },
     ],
     tutorialLink: "transformacion",
@@ -490,66 +576,68 @@ check_frame(resolver(otro.copy()), esperado)`,
     title: "Contar bambú",
     icon: "ChartColumn",
     topic: "value_counts y unique",
-    description: `\`serie.value_counts()\` cuenta cuántas veces aparece cada valor (ordenado de más a menos frecuente) y \`serie.nunique()\` dice cuántos valores distintos hay.
+    description: `El **libro de visitas del santuario** guarda el país de cada visitante.
 
 Completa \`resolver(df)\` para que devuelva un **diccionario** con:
 
-- \`"conteo"\`: una Series con cuántas veces aparece cada \`comida\`, ordenada de **mayor a menor** frecuencia.
-- \`"reservas"\`: el **número** de reservas distintas (un entero).`,
+- \`"paises"\`: la lista de países **distintos**, ordenada alfabéticamente
+- \`"pais_top"\`: el país que **más visitas** tiene
+- \`"visitas_top"\`: cuántas visitas tiene ese país (un número)
+
+> En los datos de los tests nunca hay empate en el primer puesto.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "nombre": ["Mei", "Bao", "Lin", "Tao", "Yun", "Pei", "Xiu"],
-    "comida": ["bambú", "manzana", "bambú", "bambú", "zanahoria", "manzana", "bambú"],
-    "reserva": ["Chengdu", "Wolong", "Chengdu", "Ya'an", "Wolong", "Chengdu", "Foping"],
+    "visitante": ["Ana", "Leo", "Kenji", "Marta", "Aiko", "Pablo", "Hana", "Sora"],
+    "pais": ["Chile", "España", "Japón", "España", "Japón", "España", "Japón", "Japón"],
 })`,
     starterCode: `def resolver(df):
     return {
-        "conteo": None,
-        "reservas": 0,
+        "paises": [],
+        "pais_top": None,
+        "visitas_top": 0,
     }
 
 resolver(df)`,
     solution: `def resolver(df):
+    conteo = df["pais"].value_counts()
     return {
-        "conteo": df["comida"].value_counts(),
-        "reservas": df["reserva"].nunique(),
+        "paises": sorted(df["pais"].unique()),
+        "pais_top": conteo.index[0],
+        "visitas_top": int(conteo.iloc[0]),
     }
 
 resolver(df)`,
     hints: [
-      '`df["comida"].value_counts()` ya devuelve la Series ordenada.',
-      '`df["reserva"].nunique()` cuenta los valores distintos (y `unique()` te los muestra).',
+      "`unique()` devuelve los valores distintos de una columna; `sorted(...)` los ordena.",
+      "`value_counts()` cuenta las apariciones y las ordena de mayor a menor.",
+      "El primer elemento de ese conteo es el más frecuente: mira su índice y su valor.",
     ],
     tests: [
       {
-        name: "Devuelve un diccionario con conteo y reservas",
+        name: "Devuelve un diccionario con las claves pedidas",
         code: `r = resolver(df.copy())
 assert isinstance(r, dict), "resolver debe devolver un diccionario"
-assert set(r) >= {"conteo", "reservas"}, f"Claves obtenidas: {list(r)}"`,
+faltan = {"paises", "pais_top", "visitas_top"} - set(r)
+assert not faltan, f"Faltan claves: {faltan}"`,
       },
       {
-        name: "El conteo de comidas es correcto",
+        name: "Países distintos y ordenados",
         code: `r = resolver(df.copy())
-esperado = pd.Series({"bambú": 4, "manzana": 2, "zanahoria": 1})
-check_series(r["conteo"].sort_index(), esperado.sort_index(), check_names=False)`,
+assert list(r["paises"]) == ["Chile", "España", "Japón"], f"Obtenido: {list(r['paises'])}"`,
       },
       {
-        name: "El conteo está ordenado de mayor a menor",
+        name: "País con más visitas",
         code: `r = resolver(df.copy())
-assert r["conteo"].is_monotonic_decreasing, "El conteo no está ordenado de mayor a menor"`,
-      },
-      {
-        name: "Cuenta las reservas distintas",
-        code: `r = resolver(df.copy())
-assert int(r["reservas"]) == 4, f"Se esperaban 4 reservas distintas y se obtuvo {r['reservas']}"`,
+assert r["pais_top"] == "Japón", f"Obtenido: {r['pais_top']}"
+assert r["visitas_top"] == 4, f"Obtenido: {r['visitas_top']}"`,
       },
       {
         name: "Funciona con otros datos",
-        code: `otro = pd.DataFrame({"comida": ["pera", "pera", "pera", "uva"], "reserva": ["A", "A", "A", "A"]})
-r = resolver(otro.copy())
-check_series(r["conteo"].sort_index(), pd.Series({"pera": 3, "uva": 1}), check_names=False)
-assert int(r["reservas"]) == 1, "Con una sola reserva el resultado debe ser 1"`,
+        code: `otro = pd.DataFrame({"visitante": list("abcde"), "pais": ["Perú", "Kenia", "Perú", "Brasil", "Perú"]})
+r = resolver(otro)
+assert list(r["paises"]) == ["Brasil", "Kenia", "Perú"], f"Obtenido: {list(r['paises'])}"
+assert r["pais_top"] == "Perú" and r["visitas_top"] == 3, f"Obtenido: {r['pais_top']}, {r['visitas_top']}"`,
       },
     ],
     tutorialLink: "agregacion",
@@ -561,77 +649,73 @@ assert int(r["reservas"]) == 1, "Con una sola reserva el resultado debe ser 1"`,
     title: "Resumen",
     icon: "Sigma",
     topic: "sum, mean y describe",
-    description: `¡Último reto del bosque! Las columnas numéricas tienen métodos de agregación: \`sum()\`, \`mean()\`, \`max()\`, \`min()\`... y \`describe()\` te da un resumen estadístico completo.
+    description: `Fin de semana en la **clínica veterinaria**. La directora quiere un resumen de los pacientes atendidos.
 
 Completa \`resolver(df)\` para que devuelva un **diccionario** con:
 
-- \`"total_bambu"\`: la suma de \`bambu_kg\`.
-- \`"edad_media"\`: la media de \`edad\`.
-- \`"mas_pesado"\`: el **nombre** del panda con mayor \`peso_kg\`.
-- \`"estadisticas"\`: el resultado de \`describe()\` sobre la columna \`peso_kg\` (una Series).`,
+- \`"dosis_totales"\`: la **suma** de la columna \`dosis\`
+- \`"mediana_edad"\`: la **mediana** de \`edad\`
+- \`"rango_peso"\`: la diferencia entre el peso **máximo** y el **mínimo** (\`peso_kg\`), redondeada a 1 decimal
+
+> Calcula todo a partir de \`df\`: los tests usan otros pacientes.`,
     setup: `import pandas as pd
 
 df = pd.DataFrame({
-    "nombre": ["Mei", "Bao", "Lin", "Tao", "Yun"],
-    "edad": [4, 7, 2, 10, 5],
-    "peso_kg": [80.5, 110.0, 45.2, 120.3, 95.1],
-    "bambu_kg": [12.0, 18.5, 6.3, 20.1, 15.0],
+    "paciente": ["Taro", "Sésamo", "Bruma", "Coco", "Ámbar"],
+    "edad": [3, 12, 7, 1, 9],
+    "peso_kg": [62.4, 118.0, 95.5, 21.3, 104.7],
+    "dosis": [2, 1, 3, 4, 2],
 })`,
     starterCode: `def resolver(df):
     return {
-        "total_bambu": 0,
-        "edad_media": 0,
-        "mas_pesado": "",
-        "estadisticas": None,
+        "dosis_totales": 0,
+        "mediana_edad": 0,
+        "rango_peso": 0,
     }
 
 resolver(df)`,
     solution: `def resolver(df):
     return {
-        "total_bambu": df["bambu_kg"].sum(),
-        "edad_media": df["edad"].mean(),
-        "mas_pesado": df.loc[df["peso_kg"].idxmax(), "nombre"],
-        "estadisticas": df["peso_kg"].describe(),
+        "dosis_totales": int(df["dosis"].sum()),
+        "mediana_edad": float(df["edad"].median()),
+        "rango_peso": round(float(df["peso_kg"].max() - df["peso_kg"].min()), 1),
     }
 
 resolver(df)`,
     hints: [
-      '`df["bambu_kg"].sum()` y `df["edad"].mean()` resuelven las dos primeras.',
-      '`df["peso_kg"].idxmax()` te da el **índice** de la fila con mayor peso; úsalo con `df.loc[indice, "nombre"]`.',
-      '`df["peso_kg"].describe()` devuelve la Series de estadísticas.',
+      "Las columnas tienen métodos como `.sum()`, `.median()`, `.max()` y `.min()`.",
+      "El rango es `máximo - mínimo`; luego usa `round(..., 1)`.",
     ],
     tests: [
       {
         name: "Devuelve un diccionario con las claves pedidas",
         code: `r = resolver(df.copy())
 assert isinstance(r, dict), "resolver debe devolver un diccionario"
-faltan = {"total_bambu", "edad_media", "mas_pesado", "estadisticas"} - set(r)
+faltan = {"dosis_totales", "mediana_edad", "rango_peso"} - set(r)
 assert not faltan, f"Faltan claves: {faltan}"`,
       },
       {
-        name: "Suma y media correctas",
+        name: "Suma de dosis",
         code: `r = resolver(df.copy())
-assert abs(float(r["total_bambu"]) - 71.9) < 1e-6, f"total_bambu: se esperaba 71.9 y se obtuvo {r['total_bambu']}"
-assert abs(float(r["edad_media"]) - 5.6) < 1e-6, f"edad_media: se esperaba 5.6 y se obtuvo {r['edad_media']}"`,
+assert r["dosis_totales"] == 12, f"Obtenido: {r['dosis_totales']}"`,
       },
       {
-        name: "Encuentra al panda más pesado",
+        name: "Mediana de edad",
         code: `r = resolver(df.copy())
-assert r["mas_pesado"] == "Tao", f"Se esperaba 'Tao' y se obtuvo {r['mas_pesado']!r}"`,
+assert r["mediana_edad"] == 7, f"Obtenido: {r['mediana_edad']}"`,
       },
       {
-        name: "Las estadísticas son las de describe()",
+        name: "Rango de peso redondeado",
         code: `r = resolver(df.copy())
-check_series(r["estadisticas"], df["peso_kg"].describe(), check_names=False)`,
+assert abs(r["rango_peso"] - 96.7) < 1e-9, f"Obtenido: {r['rango_peso']}"`,
       },
       {
         name: "Funciona con otros datos",
-        code: `otro = pd.DataFrame({"nombre": ["a", "b", "c"], "edad": [1, 2, 6], "peso_kg": [300.0, 10.0, 20.0], "bambu_kg": [1.0, 2.0, 3.0]}, index=[5, 6, 7])
-r = resolver(otro.copy())
-assert abs(float(r["total_bambu"]) - 6.0) < 1e-6, "total_bambu incorrecto con otros datos"
-assert abs(float(r["edad_media"]) - 3.0) < 1e-6, "edad_media incorrecta con otros datos"
-assert r["mas_pesado"] == "a", f"mas_pesado: se esperaba 'a' y se obtuvo {r['mas_pesado']!r}"
-check_series(r["estadisticas"], otro["peso_kg"].describe(), check_names=False)`,
+        code: `otro = pd.DataFrame({"paciente": list("abcd"), "edad": [2, 4, 6, 8], "peso_kg": [10.04, 50.0, 30.0, 20.0], "dosis": [1, 1, 1, 1]})
+r = resolver(otro)
+assert r["dosis_totales"] == 4, f"dosis_totales: {r['dosis_totales']}"
+assert r["mediana_edad"] == 5, f"mediana_edad: {r['mediana_edad']}"
+assert abs(r["rango_peso"] - 40.0) < 1e-9, f"rango_peso: {r['rango_peso']}"`,
       },
     ],
     tutorialLink: "agregacion",

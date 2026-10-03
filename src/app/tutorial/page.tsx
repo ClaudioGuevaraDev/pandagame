@@ -41,12 +41,12 @@ export default function TutorialIndex() {
             de pandas
           </h1>
           <p className="mt-4 max-w-xs text-ink-2">
-            {LESSONS.length} módulos, de la primera Series al nivel experto. Cada ejemplo se edita y se ejecuta aquí
+            Una guía del juego y {LESSONS.filter((l) => l.module > 0).length} módulos, de la primera Series al nivel experto. Cada ejemplo se edita y se ejecuta aquí
             mismo.
           </p>
           {LESSONS[0] && (
             <Link href={`/tutorial/${LESSONS[0].slug}`} className="btn btn-seal mt-7 px-5 py-3">
-              Empezar por el módulo 一 <ArrowRight className="h-4 w-4" />
+              Empezar por el principio <ArrowRight className="h-4 w-4" />
             </Link>
           )}
         </div>

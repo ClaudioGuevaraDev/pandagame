@@ -54,7 +54,14 @@ export const useProgress = create<ProgressState>()(
     }),
     {
       name: "pandagame-progress",
-      version: 1,
+      // v2: los retos se reescribieron; el código guardado de la v1 corresponde
+      // a enunciados que ya no existen, así que se descarta (el avance se conserva).
+      version: 2,
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as Partial<ProgressState>;
+        if (version < 2) return { ...initial, ...state, code: {} };
+        return { ...initial, ...state };
+      },
       partialize: ({ completed, attempts, code, tutorialRead }) => ({
         completed,
         attempts,

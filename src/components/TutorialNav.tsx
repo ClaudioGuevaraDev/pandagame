@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { LESSONS } from "@/content/tutorial";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
-import { KANJI_NUMERALS } from "@/lib/theme";
+import { moduleNumeral } from "@/lib/theme";
 import { Hanko } from "./icons/Logos";
 
 export function TutorialNav({ active }: { active?: string }) {
@@ -27,7 +27,7 @@ export function TutorialNav({ active }: { active?: string }) {
               <span
                 className={`font-display w-6 shrink-0 text-center text-lg leading-none ${isActive ? "text-seal" : "text-ink-3"}`}
               >
-                {KANJI_NUMERALS[l.module - 1] ?? l.module}
+                {moduleNumeral(l.module)}
               </span>
               <span className="flex-1 truncate">{l.title}</span>
               {hydrated && read[l.slug] && <Hanko className="h-5 w-5 shrink-0 text-[10px]" />}

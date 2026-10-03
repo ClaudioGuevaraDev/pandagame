@@ -1,4 +1,5 @@
 import type { Lesson } from "../types.ts";
+import { comoFuncionanLosRetos } from "./como-funcionan-los-retos.ts";
 import { fundamentos } from "./fundamentos.ts";
 import { seleccion } from "./seleccion.ts";
 import { transformacion } from "./transformacion.ts";
@@ -10,6 +11,7 @@ import { seriesTemporales } from "./series-temporales.ts";
 import { experto } from "./experto.ts";
 
 export const LESSONS: Lesson[] = [
+  comoFuncionanLosRetos,
   fundamentos,
   seleccion,
   transformacion,
