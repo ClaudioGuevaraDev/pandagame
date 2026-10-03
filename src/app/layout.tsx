@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Shippori_Mincho_B1, Zen_Kaku_Gothic_New } from "next/font/google";
 import { Header } from "@/components/Header";
+import { CloudSync } from "@/lib/cloud/CloudSync";
 import { SITE_URL } from "@/lib/site";
 import { PALETTE } from "@/lib/theme";
 import "./globals.css";
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </filter>
         </svg>
         <Header />
+        <CloudSync />
         <main id="main" tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">
           {children}
         </main>

@@ -1,6 +1,6 @@
 # PandaGame 🐼
 
-Juego web para aprender **pandas** (Python): 30 retos con tests repartidos en 3 niveles, un mapa de progreso y un tutorial de cero a experto. Python corre en el navegador con [Pyodide](https://pyodide.org) (sin backend) y el progreso se guarda en `localStorage`.
+Juego web para aprender **pandas** (Python): 30 retos con tests repartidos en 3 niveles, un mapa de progreso y un tutorial de cero a experto. Python corre en el navegador con [Pyodide](https://pyodide.org). El progreso se guarda en `localStorage` y, si el jugador entra con Google, también en [Supabase](https://supabase.com).
 
 ## Historia
 
@@ -14,6 +14,20 @@ pnpm dev        # http://localhost:3000
 pnpm validate   # comprueba que la solución de cada reto pasa sus tests y que los snippets del tutorial se ejecutan
 pnpm build
 ```
+
+## Cuentas (Supabase + Google)
+
+El login es opcional: sin sesión el juego funciona igual (solo en local) y se invita a guardar el avance. Con sesión, el progreso se fusiona con el de la nube (`progress`) y se registran las respuestas (`answers`: cada «Ejecutar» y «Correr tests» de los retos, las ejecuciones del tutorial, las pistas y la solución vista). Las respuestas dadas antes de entrar quedan en cola en el navegador y se suben al iniciar sesión.
+
+Configuración:
+
+1. Copia `.env.example` a `.env.local` con la URL del proyecto y la clave *publishable* (nunca la secreta: todo pasa por RLS).
+2. En Supabase > SQL Editor, ejecuta `supabase/migrations/0001_cuentas.sql`.
+3. En Google Cloud Console, crea un OAuth Client (Web) con la URI de redirección `https://<project_id>.supabase.co/auth/v1/callback`, y pega su Client ID y Client Secret en Supabase > Authentication > Providers > Google.
+4. En Supabase > Authentication > URL Configuration, pon la Site URL de producción y añade a Redirect URLs `http://localhost:3000/auth/callback` y `https://<tu-dominio>/auth/callback`.
+5. En el hosting, define las mismas variables `NEXT_PUBLIC_SUPABASE_*`.
+
+Sin esas variables el botón de login no aparece.
 
 ## Tests end-to-end
 
@@ -48,5 +62,7 @@ pnpm test:e2e:ui     # modo interactivo
 - `src/content/story/`: modo historia: escenas de cómic (`scenes/`), recompensas (`unlocks.ts`: para mover una recompensa basta con cambiar su `after`) y tipos.
 - `src/lib/story/unlocks.ts`: lo que se desbloquea (pistas, ventajas, lecciones, escenas, logros), derivado de los retos completados.
 - `src/components/comic/`: lector de cómic, viñetas, personajes y fondos en SVG.
+- `src/lib/cloud/`: sesión con Google, sincronización del progreso (`merge.ts`), cola de respuestas (`answers.ts`); `src/app/auth/callback/route.ts` canjea el código de OAuth.
+- `supabase/migrations/`: tablas y políticas RLS.
 
 Para añadir un reto, agrégalo al array del nivel y ejecuta `pnpm validate`.

@@ -9,6 +9,8 @@ import { useHasHydrated, useProgress } from "@/lib/progress/store";
 import { ownedCollectibles } from "@/lib/story/unlocks";
 import { Hanko, PandaLogo } from "./icons/Logos";
 import { ResetProgressDialog } from "./ResetProgressDialog";
+import { AccountButton } from "./account/AccountButton";
+import { LoginDialog } from "./account/LoginDialog";
 
 const NAV = [
   { href: "/jugar", label: "Mapa", icon: MapIcon },
@@ -86,8 +88,10 @@ export function Header() {
         >
           <Trash2 className="h-4 w-4" />
         </button>
+        <AccountButton />
       </nav>
       {resetOpen && <ResetProgressDialog onClose={() => setResetOpen(false)} />}
+      <LoginDialog />
     </header>
   );
 }

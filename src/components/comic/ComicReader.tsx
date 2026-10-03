@@ -11,6 +11,7 @@ import { useHasHydrated, useProgress } from "@/lib/progress/store";
 import { challengeNumber, nextChallenge } from "@/lib/progress/unlock";
 import { isSceneUnlocked, unlocksAfter } from "@/lib/story/unlocks";
 import { Hanko } from "@/components/icons/Logos";
+import { openLogin, useAuth } from "@/lib/cloud/auth";
 import { ComicPanel, panelText } from "./ComicPanel";
 
 /**
@@ -340,6 +341,7 @@ function SceneEnd({ rewards, next, final }: { rewards: Unlock[]; next?: (typeof 
               <BookMarked className="h-5 w-5" /> Abrir el Diario de Bao
             </Link>
           )}
+          <SaveRewardsLink />
           <div className="grid grid-cols-2 gap-3">
             <Link href="/jugar" className="btn btn-paper px-4 py-2.5">
               <MapIcon className="h-4 w-4" /> Mapa
@@ -357,5 +359,16 @@ function SceneEnd({ rewards, next, final }: { rewards: Unlock[]; next?: (typeof 
         </div>
       </div>
     </div>
+  );
+}
+
+/** Sin sesión, invita a guardar las recompensas con Google. */
+function SaveRewardsLink() {
+  const signedOut = useAuth((s) => s.status === "out");
+  if (!signedOut) return null;
+  return (
+    <button onClick={openLogin} className="text-sm font-bold text-[#f6d77a] underline underline-offset-4 hover:text-paper-3" aria-haspopup="dialog">
+      Guarda las recompensas de Bao con tu cuenta de Google
+    </button>
   );
 }

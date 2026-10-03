@@ -13,6 +13,8 @@ import { SCENES } from "../src/content/story/scenes/index.ts";
 import { UNLOCKS } from "../src/content/story/unlocks.ts";
 import { UNLOCK_ICONS } from "../src/content/story/icons.ts";
 import { BACKGROUNDS, CHARACTER_IDS, MOODS, POSES, PROPS } from "../src/content/story/types.ts";
+import { mergeProgress, type SyncedProgress } from "../src/lib/cloud/merge.ts";
+import { safeNext } from "../src/lib/cloud/safe-next.ts";
 
 type TestOutput = {
   error: string | null;
@@ -164,6 +166,45 @@ for (const c of selected) {
   const ran = JSON.parse(run(c.setup, c.solution));
   if (!ran.ok) problems.push(`${c.id}: la solución falla al ejecutarse: ${ran.error}`);
   console.log(`${good.error || failed.length ? "✗" : "✓"} ${c.id} ${c.title}`);
+}
+
+// Sincronización con la nube: la fusión no pierde progreso de ningún lado
+{
+  const empty: SyncedProgress = {
+    completed: {}, attempts: {}, code: {}, tutorialRead: {}, scenesSeen: {}, hintsUsed: {}, journalSeen: 0, comicAutoplay: true,
+  };
+  const local: SyncedProgress = {
+    ...empty,
+    completed: { a: { at: "2026-02-01T00:00:00Z", attempts: 3 }, b: { at: "2026-01-01T00:00:00Z", attempts: 1 } },
+    attempts: { a: 3, b: 1 },
+    code: { a: "local" },
+    tutorialRead: { x: true },
+    hintsUsed: { a: 1 },
+    journalSeen: 2,
+    comicAutoplay: false,
+  };
+  const remote: Partial<SyncedProgress> = {
+    completed: { a: { at: "2026-01-15T00:00:00Z", attempts: 2 }, c: { at: "2026-01-20T00:00:00Z", attempts: 4 } },
+    attempts: { a: 2, c: 5 },
+    code: { a: "remoto", c: "remoto-c" },
+    scenesSeen: { prologo: true },
+    hintsUsed: { a: 2 },
+    journalSeen: 5,
+    comicAutoplay: true,
+  };
+  const m = mergeProgress(local, remote);
+  const check = (ok: boolean, what: string) => ok || problems.push(`mergeProgress: ${what}`);
+  check(Object.keys(m.completed).sort().join() === "a,b,c", "unión de retos completados");
+  check(m.completed.a.at === "2026-01-15T00:00:00Z", "gana la fecha más antigua");
+  check(m.attempts.a === 3 && m.attempts.c === 5, "intentos: el máximo");
+  check(m.code.a === "local" && m.code.c === "remoto-c", "código: el local tiene prioridad");
+  check(m.tutorialRead.x === true && m.scenesSeen.prologo === true, "unión de lecciones y escenas");
+  check(m.hintsUsed.a === 2 && m.journalSeen === 5, "pistas y diario: el máximo");
+  check(m.comicAutoplay === false, "preferencias locales");
+  check(mergeProgress(local, null) === local, "sin datos en la nube queda el local");
+  check(safeNext("/jugar?x=1") === "/jugar?x=1", "safeNext acepta rutas internas");
+  for (const bad of ["//evil.com", "https://evil.com", "/\\evil.com", null]) check(safeNext(bad) === "/", `safeNext rechaza ${bad}`);
+  console.log("· sincronización");
 }
 
 // Snippets del tutorial: deben ejecutarse sin error

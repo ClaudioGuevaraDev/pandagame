@@ -88,6 +88,8 @@ export default async function LessonPage(props: PageProps<"/tutorial/[leccion]">
                     key={i}
                     code={b.code}
                     title={b.title}
+                    lessonSlug={lesson.slug}
+                    snippet={i}
                     preview={
                       <Markdown className="snippet-preview">{"```python\n" + b.code + "\n```"}</Markdown>
                     }

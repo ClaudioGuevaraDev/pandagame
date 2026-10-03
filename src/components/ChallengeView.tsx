@@ -42,6 +42,8 @@ import {
   type RunResult,
   type TestRun,
 } from "@/lib/pyodide/runner";
+import { LoginNudge } from "@/components/account/LoginNudge";
+import { track } from "@/lib/cloud/answers";
 import { FEATURES } from "@/lib/features";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
 import { isChallengeUnlocked } from "@/lib/progress/unlock";
@@ -178,10 +180,12 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
     try {
       const res = await runCode(code, challenge.setup);
       setRunResult(res);
+      track({ kind: "challenge_run", challenge_id: challengeId, code, error: res.error, stdout: res.stdout });
       setAnnouncement(res.ok ? "Ejecución terminada." : "La ejecución terminó con un error.");
     } catch (e) {
       setExecError((e as Error).message);
       setAnnouncement((e as Error).message);
+      track({ kind: "challenge_run", challenge_id: challengeId, code, error: (e as Error).message, stdout: "" });
     } finally {
       endBusy();
     }
@@ -201,11 +205,34 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
       setAnnouncement(`${passedN} de ${res.results.length} tests superados.`);
       const wasDone = !!useProgress.getState().completed[challengeId];
       recordAttempt(challengeId, passed);
+      track({
+        kind: "challenge_test",
+        challenge_id: challengeId,
+        code,
+        passed,
+        tests_passed: passedN,
+        tests_total: res.results.length,
+        error: res.error,
+        stdout: res.stdout,
+        attempt: useProgress.getState().attempts[challengeId] ?? 1,
+      });
       if (passed && !wasDone) setCelebrate(true);
     } catch (e) {
       setExecError((e as Error).message);
       setAnnouncement((e as Error).message);
       setTestRun(null);
+      // Tiempo agotado o fallo del intérprete: no cuenta como intento, pero queda registrado.
+      track({
+        kind: "challenge_test",
+        challenge_id: challengeId,
+        code,
+        passed: false,
+        tests_passed: null,
+        tests_total: challenge.tests.length,
+        error: (e as Error).message,
+        stdout: "",
+        attempt: (useProgress.getState().attempts[challengeId] ?? 0) + 1,
+      });
     } finally {
       endBusy();
     }
@@ -236,6 +263,12 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
   const showSolution = () => {
     if (!confirm("¿Ver la solución? Se reemplazará tu código en el editor.")) return;
     onChange(challenge.solution);
+    track({ kind: "solution", challenge_id: challengeId });
+  };
+
+  const showHint = () => {
+    track({ kind: "hint", challenge_id: challengeId, hint: hintsShown + 1 });
+    revealHint(challengeId);
   };
 
   const scene = sceneAfter(challengeId);
@@ -366,7 +399,7 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
             ))}
             <div className="flex flex-wrap gap-2.5">
               {hintsShown < allowedHints && (
-                <button onClick={() => revealHint(challengeId)} className="btn btn-paper px-3 py-1.5 text-sm">
+                <button onClick={showHint} className="btn btn-paper px-3 py-1.5 text-sm">
                   <Lightbulb className="h-4 w-4" /> {hintsShown ? "Otra pista" : "Ver pista"}
                 </button>
               )}
@@ -649,6 +682,7 @@ function SuccessModal({
           {rewards.length === 1 ? "Te espera una recompensa en la historia" : `Te esperan ${rewards.length} recompensas en la historia`}
         </p>
       )}
+      <LoginNudge className="mt-5" text="No pierdas tu avance: guárdalo con tu cuenta de Google." />
       <div className="mt-7 flex flex-col gap-3">
         {storyHref && (
           <Link href={storyHref} className="btn btn-seal px-5 py-3">

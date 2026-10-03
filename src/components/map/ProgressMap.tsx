@@ -12,6 +12,7 @@ import { Hanko, LevelLogo, PandaLogo } from "@/components/icons/Logos";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
 import { challengeNumber, currentChallenge, firstOpenIndex } from "@/lib/progress/unlock";
 import { nextStop } from "@/lib/story/unlocks";
+import { MapLoginBanner } from "@/components/account/MapLoginBanner";
 import { LEVEL_THEME, PALETTE } from "@/lib/theme";
 
 const ROW = 136; // alto de cada fila del camino (px)
@@ -150,6 +151,7 @@ export function ProgressMap() {
         </div>
       </div>
 
+      {hydrated && <MapLoginBanner completed={completed} />}
       {stop && (
         <Link
           href={stop.type === "scene" ? sceneHref(stop.scene) : challengeHref(stop.challenge)}

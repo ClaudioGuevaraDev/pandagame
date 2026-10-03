@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { ALL_CHALLENGES } from "@/content/challenges";
 import { LESSONS } from "@/content/tutorial";
+import { useAuth } from "@/lib/cloud/auth";
+import { pushNow } from "@/lib/cloud/sync";
 import { useProgress } from "@/lib/progress/store";
 import { SCENES } from "@/content/story/scenes";
 import { Dialog } from "./Dialog";
@@ -17,12 +19,15 @@ export function ResetProgressDialog({ onClose }: { onClose: () => void }) {
   const read = useProgress((s) => Object.keys(s.tutorialRead).length);
   const seen = useProgress((s) => Object.keys(s.scenesSeen).length);
   const resetAll = useProgress((s) => s.resetAll);
+  const signedIn = useAuth((s) => s.status === "in");
 
   const confirmed = typed.trim().toUpperCase() === CONFIRM_WORD;
 
-  const reset = () => {
+  const reset = async () => {
     if (!confirmed) return;
     resetAll();
+    // Con sesión, el progreso de la nube también se reinicia antes de recargar.
+    await pushNow().catch(() => {});
     // Recarga completa al inicio: no queda código, resultados ni estado de Python en memoria.
     window.location.replace("/");
   };
@@ -36,7 +41,9 @@ export function ResetProgressDialog({ onClose }: { onClose: () => void }) {
         Borrar todo el progreso
       </h2>
       <p id="reset-desc" className="mt-1 text-center text-sm text-ink-2">
-        Se eliminarán todos los datos guardados en este navegador. No se puede deshacer.
+        {signedIn
+          ? "Se eliminarán los datos de este navegador y el progreso guardado en tu cuenta. No se puede deshacer."
+          : "Se eliminarán todos los datos guardados en este navegador. No se puede deshacer."}
       </p>
 
       <ul className="mt-5 divide-y divide-rule border-y-2 border-ink text-sm text-ink-2 [&>li]:py-1.5">
@@ -73,7 +80,7 @@ export function ResetProgressDialog({ onClose }: { onClose: () => void }) {
         <input
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && reset()}
+          onKeyDown={(e) => e.key === "Enter" && void reset()}
           className="mt-1.5 w-full rounded-[6px_10px_6px_8px] border-2 border-ink bg-paper px-3 py-2 font-mono text-ink placeholder:text-ink-3"
           placeholder={CONFIRM_WORD}
           autoComplete="off"

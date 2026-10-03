@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Pencil, Play, RotateCcw } from "lucide-react";
 import { CodeEditor } from "@/components/CodeEditor";
 import { OutputPanel } from "@/components/OutputPanel";
+import { track } from "@/lib/cloud/answers";
 import { ensureRunner, runCode, type RunResult } from "@/lib/pyodide/runner";
 
 /**
@@ -15,8 +16,13 @@ export function RunnableSnippet({
   code: initial,
   title,
   preview,
+  lessonSlug,
+  snippet,
 }: {
   code: string;
+  /** Lección e índice del bloque: identifican el ejemplo en el registro de respuestas. */
+  lessonSlug: string;
+  snippet: number;
   title?: string;
   /** Código ya resaltado en el servidor, mostrado hasta que el usuario edite. */
   preview?: ReactNode;
@@ -36,9 +42,12 @@ export function RunnableSnippet({
     setBusy(true);
     setError(null);
     try {
-      setResult(await runCode(code));
+      const res = await runCode(code);
+      setResult(res);
+      track({ kind: "tutorial_run", lesson_slug: lessonSlug, snippet, code, error: res.error, stdout: res.stdout });
     } catch (e) {
       setError((e as Error).message);
+      track({ kind: "tutorial_run", lesson_slug: lessonSlug, snippet, code, error: (e as Error).message, stdout: "" });
     } finally {
       setBusy(false);
     }
