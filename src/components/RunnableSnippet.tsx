@@ -77,7 +77,14 @@ export function RunnableSnippet({
       {editing ? (
         <CodeEditor value={code} onChange={setCode} onRun={run} autoHeight ariaLabel={`Editor: ${title ?? "ejemplo"}`} />
       ) : preview ? (
-        <div onDoubleClick={() => setEditing(true)} className="cursor-text">
+        // tabIndex + región: si una línea es larga, el código se puede desplazar con el teclado.
+        <div
+          onDoubleClick={() => setEditing(true)}
+          className="cursor-text overflow-x-auto bg-editor scrollbar-thin"
+          tabIndex={0}
+          role="region"
+          aria-label={`Código: ${title ?? "ejemplo"}`}
+        >
           {preview}
         </div>
       ) : (

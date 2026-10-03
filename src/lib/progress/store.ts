@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 
 export type CompletedInfo = { at: string; attempts: number };
 
@@ -17,6 +17,36 @@ type ProgressState = {
   recordAttempt: (id: string, passed: boolean) => void;
   markLessonRead: (slug: string) => void;
   resetAll: () => void;
+};
+
+/**
+ * localStorage tolerante a fallos: si el valor guardado está corrupto se descarta
+ * (en vez de dejar la app sin hidratar) y si el almacenamiento no está disponible
+ * (modo privado, cuota llena) el juego sigue funcionando sin guardar.
+ */
+const safeLocalStorage: StateStorage = {
+  getItem: (key) => {
+    try {
+      const value = localStorage.getItem(key);
+      if (value !== null) JSON.parse(value);
+      return value;
+    } catch {
+      try {
+        localStorage.removeItem(key);
+      } catch {}
+      return null;
+    }
+  },
+  setItem: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {}
+  },
+  removeItem: (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  },
 };
 
 const initial = { completed: {}, attempts: {}, code: {}, tutorialRead: {} };
@@ -54,6 +84,7 @@ export const useProgress = create<ProgressState>()(
     }),
     {
       name: "pandagame-progress",
+      storage: createJSONStorage(() => safeLocalStorage),
       // v2: los retos se reescribieron; el código guardado de la v1 corresponde
       // a enunciados que ya no existen, así que se descarta (el avance se conserva).
       version: 2,

@@ -16,7 +16,7 @@ export const MiniMap = memo(function MiniMap({ activeId }: { activeId: string })
   const firstOpen = firstOpenIndex(completed);
 
   return (
-    <nav aria-label="Progreso de retos" className="flex items-center gap-3">
+    <nav aria-label="Progreso de retos" className="flex items-center gap-2">
       {LEVELS.map((level) => {
         const theme = LEVEL_THEME[level.id];
         return (
@@ -39,7 +39,7 @@ export const MiniMap = memo(function MiniMap({ activeId }: { activeId: string })
                       : "h-2 w-2 rounded-full border border-ink-3/60"
               }`;
               const label = `Reto ${n}: ${c.title}${done ? " (completado)" : unlocked ? "" : " (bloqueado)"}`;
-              // El área clicable mide 24px aunque el punto se vea pequeño (WCAG 2.5.8).
+              // Cada punto tiene un área clicable de 24×24 px aunque se vea pequeño (WCAG 2.5.8).
               return unlocked ? (
                 <Link
                   key={c.id}
@@ -47,12 +47,12 @@ export const MiniMap = memo(function MiniMap({ activeId }: { activeId: string })
                   title={c.title}
                   aria-label={label}
                   aria-current={active ? "page" : undefined}
-                  className="grid h-6 w-3.5 place-items-center rounded-sm"
+                  className="grid h-6 w-6 place-items-center rounded-sm"
                 >
                   <span className={dot} />
                 </Link>
               ) : (
-                <span key={c.id} title={label} className="grid h-6 w-3.5 place-items-center">
+                <span key={c.id} title={label} className="grid h-6 w-6 place-items-center">
                   <span className={dot} />
                 </span>
               );

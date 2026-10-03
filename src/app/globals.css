@@ -327,6 +327,9 @@ body::before {
 /* Vista previa resaltada de los ejemplos del tutorial: mismo tema oscuro que el editor */
 .snippet-preview pre {
   margin: 0;
+  overflow: visible; /* el desplazamiento lo hace el contenedor accesible */
+  width: max-content;
+  min-width: 100%;
   border: 0;
   border-radius: 0;
   background: var(--editor-bg);
