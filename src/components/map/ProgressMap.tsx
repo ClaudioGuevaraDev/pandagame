@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { Check, Lock, Play } from "lucide-react";
+import { Lock, Play } from "lucide-react";
 import { ALL_CHALLENGES, LEVELS, challengeHref } from "@/content/challenges";
 import type { Challenge, Level } from "@/content/types";
 import { ChallengeIcon } from "@/components/icons/ChallengeIcon";
-import { LevelLogo, PandaLogo } from "@/components/icons/Logos";
+import { Hanko, LevelLogo, PandaLogo } from "@/components/icons/Logos";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
 import { currentChallenge, isChallengeUnlocked, levelProgress } from "@/lib/progress/unlock";
 import { LEVEL_THEME } from "@/lib/theme";
@@ -50,12 +50,17 @@ export function ProgressMap() {
             hydrated={hydrated}
           />
         ))}
+        <p className="font-display mt-2 text-center text-ink-3">
+          <span className="text-3xl text-ink">頂</span>
+          <br />
+          La cumbre te espera.
+        </p>
       </div>
 
       {current && (
         <Link
           href={challengeHref(current)}
-          className="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-2xl bg-emerald-500 px-6 py-3 font-black text-emerald-950 shadow-[0_6px_0_0_#047857] transition hover:bg-emerald-400 active:translate-y-1 active:shadow-[0_2px_0_0_#047857]"
+          className="btn btn-seal fixed bottom-6 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap px-6 py-3 text-base"
         >
           <Play className="h-4 w-4 fill-current" />
           Continuar · Reto {ALL_CHALLENGES.indexOf(current) + 1}
@@ -89,47 +94,53 @@ function LevelSection({
   }));
 
   return (
-    <section className="mb-10 w-full">
-      <div
-        className={`sticky top-0 z-10 mb-6 flex items-center gap-4 rounded-2xl border ${theme.border} bg-zinc-950/95 p-4 backdrop-blur ${levelLocked ? "opacity-70" : ""}`}
-      >
-        <LevelLogo level={level.id} className="h-14 w-14 shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className={`text-xs font-black uppercase tracking-widest ${theme.text}`}>
-            Nivel {LEVELS.indexOf(level) + 1} · {level.difficulty}
-          </p>
-          <h2 className="truncate text-xl font-black text-zinc-50">{level.name}</h2>
-          <p className="truncate text-sm text-zinc-400">{level.description}</p>
-        </div>
-        <div className="shrink-0 text-right">
-          {levelLocked ? (
-            <Lock className="ml-auto h-5 w-5 text-zinc-500" />
-          ) : (
-            <span className={`text-lg font-black tabular-nums ${theme.text}`}>
-              {done}/{total}
-            </span>
-          )}
-          <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-zinc-800">
-            <div className={`h-full ${theme.bg}`} style={{ width: `${(done / Math.max(total, 1)) * 100}%` }} />
+    <section className="mb-12 w-full">
+      {/* Cabecera tipo pergamino colgante (kakejiku) */}
+      <div className="sticky top-0 z-10 -mx-1 mb-8 pt-2">
+        <div className={`paper-card relative flex items-center gap-4 p-4 ${levelLocked ? "grayscale-[0.7]" : ""}`}>
+          <LevelLogo level={level.id} className="h-16 w-16 shrink-0" />
+          <div className="relative min-w-0 flex-1">
+            <p className={`text-[11px] font-black uppercase tracking-[0.25em] ${theme.text}`}>
+              Nivel {theme.kanji} · {level.difficulty}
+            </p>
+            <h2 className="font-display truncate text-2xl font-extrabold leading-tight text-ink">{level.name}</h2>
+            <p className="truncate text-sm text-ink-3">{level.description}</p>
+          </div>
+          <div className="relative shrink-0 text-right">
+            {levelLocked ? (
+              <Lock className="ml-auto h-5 w-5 text-ink-3" />
+            ) : (
+              <span className="font-display text-2xl font-extrabold tabular-nums text-ink">
+                {done}
+                <span className="text-base text-ink-3">/{total}</span>
+              </span>
+            )}
+            <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-paper-2">
+              <div className={`h-full ${theme.bg}`} style={{ width: `${(done / Math.max(total, 1)) * 100}%` }} />
+            </div>
           </div>
         </div>
       </div>
 
       <div className="relative mx-auto" style={{ width: WIDTH, height: points.length * ROW }}>
-        <svg className="absolute inset-0" width={WIDTH} height={points.length * ROW} aria-hidden="true">
+        <svg className="absolute inset-0 overflow-visible" width={WIDTH} height={points.length * ROW} aria-hidden="true">
           {points.slice(1).map((p, i) => {
             const a = points[i];
             const doneSeg = stateOf(level.challenges[i]) === "done";
-            return (
+            const d = `M${a.x},${a.y} C${a.x},${a.y + ROW / 2} ${p.x},${p.y - ROW / 2} ${p.x},${p.y}`;
+            return doneSeg ? (
               <path
                 key={i}
-                d={`M${a.x},${a.y} C${a.x},${a.y + ROW / 2} ${p.x},${p.y - ROW / 2} ${p.x},${p.y}`}
+                d={d}
                 fill="none"
-                strokeWidth={8}
+                stroke="#1d1b18"
+                strokeWidth={10}
                 strokeLinecap="round"
-                className={doneSeg ? theme.stroke : "stroke-zinc-800"}
-                strokeDasharray={doneSeg ? undefined : "2 14"}
+                filter="url(#brush)"
+                opacity={0.9}
               />
+            ) : (
+              <path key={i} d={d} fill="none" stroke="#b9a881" strokeWidth={4} strokeLinecap="round" strokeDasharray="1 12" />
             );
           })}
         </svg>
@@ -169,44 +180,51 @@ function MapNode({
   nodeRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const theme = LEVEL_THEME[challenge.level];
-  const size = state === "current" ? 76 : 64;
-
-  const circle =
-    state === "locked"
-      ? "bg-zinc-800 text-zinc-500 shadow-[0_6px_0_0_#18181b]"
-      : `${theme.bg} text-white ${theme.shadow} hover:brightness-110 active:translate-y-1 active:shadow-none`;
+  const size = state === "current" ? 78 : 64;
 
   const body = (
     <span
-      className={`relative flex items-center justify-center rounded-full transition ${circle}`}
+      className="relative block transition-transform duration-200 group-hover:-translate-y-0.5"
       style={{ width: size, height: size }}
     >
       {state === "current" && (
-        <span className={`absolute -inset-2 animate-ping rounded-full ring-4 ${theme.ring} opacity-30`} />
+        <span className="seal-pulse absolute inset-0 rounded-full border-[3px] border-seal" aria-hidden="true" />
       )}
       {state === "locked" ? (
-        <Lock className="h-6 w-6" />
+        <span className="flex h-full w-full items-center justify-center rounded-full border-2 border-dashed border-ink-3/60 bg-paper-2/60 text-ink-3">
+          <Lock className="h-5 w-5" />
+        </span>
       ) : (
-        <ChallengeIcon name={challenge.icon} className={state === "current" ? "h-8 w-8" : "h-7 w-7"} />
-      )}
-      {state === "done" && (
-        <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-950 bg-amber-400 text-amber-950">
-          <Check className="h-3.5 w-3.5" strokeWidth={4} />
+        <span
+          className={`flex h-full w-full items-center justify-center rounded-full border-[2.5px] border-ink ${
+            state === "current" ? "bg-paper-3 text-ink" : `${theme.bg} text-paper-3`
+          }`}
+          style={{ boxShadow: "3px 4px 0 0 #1d1b18" }}
+        >
+          <ChallengeIcon
+            name={challenge.icon}
+            className={state === "current" ? "h-8 w-8" : "h-7 w-7"}
+            strokeWidth={2.2}
+          />
         </span>
       )}
+      {state === "done" && <Hanko className="absolute -right-3 -top-2 h-7 w-7 rotate-[-10deg] text-sm" />}
+      <span
+        className={`font-display absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-bold tabular-nums ${
+          state === "locked" ? "text-ink-3/70" : "text-ink-2"
+        }`}
+      >
+        {index}
+      </span>
     </span>
   );
 
   return (
-    <div
-      ref={nodeRef}
-      className="group absolute -translate-x-1/2 -translate-y-1/2"
-      style={{ left: x, top: y }}
-    >
+    <div ref={nodeRef} className="group absolute -translate-x-1/2 -translate-y-1/2" style={{ left: x, top: y }}>
       {state === "current" && (
-        <div className="absolute -top-14 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-xl border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-black text-zinc-100 shadow-lg">
+        <div className="absolute -top-[3.4rem] left-1/2 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-[10px_14px_10px_12px] border-2 border-ink bg-paper-3 px-2.5 py-1 text-xs font-black text-ink shadow-[2px_3px_0_0_#1d1b18]">
           <PandaLogo className="h-5 w-5" /> ¡Estás aquí!
-          <span className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-zinc-700 bg-zinc-900" />
+          <span className="absolute -bottom-[7px] left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-ink bg-paper-3" />
         </div>
       )}
 
@@ -219,16 +237,16 @@ function MapNode({
       )}
 
       <div
-        className={`pointer-events-none absolute top-1/2 z-10 w-48 -translate-y-1/2 rounded-xl border border-zinc-700 bg-zinc-900 p-3 opacity-0 shadow-xl transition group-hover:opacity-100 ${
-          side === "left" ? "right-full mr-4" : "left-full ml-4"
+        className={`paper-card pointer-events-none absolute top-1/2 z-10 w-52 -translate-y-1/2 p-3 opacity-0 transition duration-200 group-hover:opacity-100 ${
+          side === "left" ? "right-full mr-5" : "left-full ml-5"
         }`}
       >
-        <p className={`text-[11px] font-black uppercase tracking-wider ${theme.text}`}>Reto {index}</p>
-        <p className="font-black text-zinc-50">{challenge.title}</p>
-        <p className="text-sm text-zinc-400">{challenge.topic}</p>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.text}`}>Reto {index}</p>
+        <p className="font-display text-lg font-extrabold leading-tight text-ink">{challenge.title}</p>
+        <p className="text-sm text-ink-2">{challenge.topic}</p>
+        <p className="mt-1.5 border-t border-rule pt-1.5 text-xs text-ink-3">
           {challenge.tests.length} tests ·{" "}
-          {state === "done" ? "Completado ✓" : state === "current" ? "Disponible" : "Bloqueado 🔒"}
+          {state === "done" ? "Completado" : state === "current" ? "Disponible" : "Bloqueado"}
         </p>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Trash2 } from "lucide-react";
 import { ALL_CHALLENGES } from "@/content/challenges";
 import { LESSONS } from "@/content/tutorial";
@@ -30,29 +31,30 @@ export function ResetProgressDialog({ onClose }: { onClose: () => void }) {
     window.location.replace("/");
   };
 
-  return (
+  // Portal a <body>: el header usa backdrop-filter, que rompe el position: fixed de sus hijos.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="reset-title"
-        className="w-full max-w-sm rounded-3xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl"
+        className="paper-card ink-in w-full max-w-sm p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-500/15 text-red-400">
-          <Trash2 className="h-7 w-7" />
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border-2 border-seal text-seal">
+          <Trash2 className="h-6 w-6" />
         </div>
-        <h2 id="reset-title" className="mt-4 text-center text-2xl font-black text-zinc-50">
+        <h2 id="reset-title" className="font-display mt-4 text-center text-2xl font-extrabold text-ink">
           Borrar todo el progreso
         </h2>
-        <p className="mt-1 text-center text-sm text-zinc-400">
+        <p className="mt-1 text-center text-sm text-ink-2">
           Se eliminarán todos los datos guardados en este navegador. No se puede deshacer.
         </p>
 
-        <ul className="mt-5 space-y-1.5 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
+        <ul className="mt-5 divide-y divide-rule border-y-2 border-ink text-sm text-ink-2 [&>li]:py-1.5">
           <li className="flex justify-between">
             <span>Retos completados</span>
             <span className="font-bold tabular-nums">
@@ -75,31 +77,28 @@ export function ResetProgressDialog({ onClose }: { onClose: () => void }) {
           </li>
         </ul>
 
-        <label className="mt-5 block text-sm text-zinc-400">
-          Escribe <b className="font-mono text-zinc-100">{CONFIRM_WORD}</b> para confirmar
+        <label className="mt-5 block text-sm text-ink-2">
+          Escribe <b className="font-mono text-seal">{CONFIRM_WORD}</b> para confirmar
           <input
             autoFocus
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && reset()}
-            className="mt-1.5 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono text-zinc-100 outline-none focus:border-red-500"
+            className="mt-1.5 w-full rounded-[6px_10px_6px_8px] border-2 border-ink bg-paper px-3 py-2 font-mono text-ink outline-none placeholder:text-ink-3/50 focus:border-seal"
             placeholder={CONFIRM_WORD}
           />
         </label>
 
         <div className="mt-5 flex flex-col gap-2">
-          <button
-            onClick={reset}
-            disabled={!confirmed}
-            className="rounded-2xl bg-red-500 px-5 py-3 font-black text-white shadow-[0_6px_0_0_#991b1b] transition hover:bg-red-400 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:active:translate-y-0 disabled:active:shadow-[0_6px_0_0_#991b1b]"
-          >
+          <button onClick={reset} disabled={!confirmed} className="btn btn-seal px-5 py-3">
             Borrar todo
           </button>
-          <button onClick={onClose} className="rounded-2xl px-5 py-2.5 font-bold text-zinc-300 hover:bg-zinc-800">
+          <button onClick={onClose} className="btn btn-paper px-5 py-2.5">
             Cancelar
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

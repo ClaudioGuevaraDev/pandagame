@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { LEVELS, challengeHref } from "@/content/challenges";
-import { LevelLogo } from "@/components/icons/Logos";
 import { useProgress } from "@/lib/progress/store";
 import { isChallengeUnlocked } from "@/lib/progress/unlock";
 import { LEVEL_THEME } from "@/lib/theme";
@@ -17,14 +16,20 @@ export function MiniMap({ activeId }: { activeId: string }) {
         const theme = LEVEL_THEME[level.id];
         return (
           <div key={level.id} className="flex items-center gap-1" title={level.name}>
-            <LevelLogo level={level.id} className="h-4 w-4" />
+            <span className={`font-display mr-0.5 text-sm font-extrabold ${theme.text}`}>{theme.kanji}</span>
             {level.challenges.map((c) => {
               const done = !!completed[c.id];
               const unlocked = isChallengeUnlocked(c.id, completed);
               const active = c.id === activeId;
-              const dot = `block h-2 rounded-full transition-all ${active ? "w-5" : "w-2"} ${
-                done ? theme.bg : unlocked ? `${theme.bg} opacity-50` : "bg-zinc-700"
-              } ${active ? `ring-2 ring-offset-2 ring-offset-zinc-950 ${theme.ring}` : ""}`;
+              const dot = `block transition-all ${
+                active
+                  ? "h-3 w-3 rounded-full border-2 border-seal bg-paper-3"
+                  : done
+                    ? "h-2 w-2 rounded-[2px] bg-seal"
+                    : unlocked
+                      ? "h-2 w-2 rounded-full bg-ink"
+                      : "h-2 w-2 rounded-full border border-ink-3/50"
+              }`;
               return unlocked ? (
                 <Link key={c.id} href={challengeHref(c)} title={c.title} className={dot} />
               ) : (

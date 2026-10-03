@@ -7,6 +7,7 @@ import { getChallengeById, challengeHref } from "@/content/challenges";
 import { Markdown } from "@/components/Markdown";
 import { RunnableSnippet } from "@/components/RunnableSnippet";
 import { TutorialNav } from "@/components/TutorialNav";
+import { KANJI_NUMERALS } from "@/lib/theme";
 import { LessonReadMarker } from "@/components/LessonReadMarker";
 
 export function generateStaticParams() {
@@ -31,15 +32,25 @@ export default async function LessonPage(props: PageProps<"/tutorial/[leccion]">
 
   return (
     <>
-      <aside className="hidden w-72 shrink-0 overflow-y-auto border-r border-zinc-800 p-3 scrollbar-thin lg:block">
-        <p className="px-3 pb-2 pt-1 text-xs font-black uppercase tracking-widest text-zinc-500">Módulos</p>
+      <aside className="hidden w-72 shrink-0 overflow-y-auto border-r-2 border-ink bg-paper-2/40 py-5 scrollbar-thin lg:block">
+        <p className="px-4 pb-3 text-[11px] font-black uppercase tracking-[0.3em] text-ink-3">Módulos</p>
         <TutorialNav active={lesson.slug} />
       </aside>
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
-        <article className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
-          <p className="text-xs font-black uppercase tracking-widest text-emerald-400">Módulo {lesson.module}</p>
-          <h1 className="mt-1 text-3xl font-black text-zinc-50">{lesson.title}</h1>
-          <p className="mt-2 text-lg text-zinc-400">{lesson.summary}</p>
+        <article className="mx-auto max-w-3xl px-5 py-10 sm:px-10">
+          <header className="ink-in relative border-b-2 border-ink pb-6">
+            <span
+              className="font-display pointer-events-none absolute -top-4 right-0 text-[8rem] font-extrabold leading-none text-ink/[0.07]"
+              aria-hidden="true"
+            >
+              {KANJI_NUMERALS[lesson.module - 1]}
+            </span>
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-seal">Módulo {lesson.module}</p>
+            <h1 className="font-display mt-2 text-4xl font-extrabold leading-tight text-ink sm:text-5xl">
+              {lesson.title}
+            </h1>
+            <p className="mt-3 max-w-xl text-lg text-ink-2">{lesson.summary}</p>
+          </header>
 
           <div className="mt-6">
             {lesson.blocks.map((b, i) =>
@@ -54,15 +65,11 @@ export default async function LessonPage(props: PageProps<"/tutorial/[leccion]">
           </div>
 
           {related.length > 0 && (
-            <div className="mt-10 rounded-2xl border border-zinc-800 p-4">
-              <h2 className="font-black text-zinc-100">Practica en el juego</h2>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <div className="paper-card mt-12 p-5">
+              <h2 className="font-display text-xl font-extrabold text-ink">Practica en el juego</h2>
+              <div className="mt-3 flex flex-wrap gap-2.5">
                 {related.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={challengeHref(c)}
-                    className="rounded-xl border border-zinc-700 px-3 py-1.5 text-sm font-bold text-zinc-300 hover:bg-zinc-800"
-                  >
+                  <Link key={c.id} href={challengeHref(c)} className="btn btn-paper px-3 py-1.5 text-sm">
                     {c.title}
                   </Link>
                 ))}
@@ -72,19 +79,16 @@ export default async function LessonPage(props: PageProps<"/tutorial/[leccion]">
 
           <LessonReadMarker slug={lesson.slug} />
 
-          <nav className="mt-8 flex justify-between gap-4 border-t border-zinc-800 pt-6">
+          <nav className="mt-10 flex items-center justify-between gap-4 border-t border-rule pt-6">
             {prev ? (
-              <Link href={`/tutorial/${prev.slug}`} className="flex items-center gap-2 font-bold text-zinc-400 hover:text-zinc-100">
+              <Link href={`/tutorial/${prev.slug}`} className="btn-ghost px-2 py-1">
                 <ArrowLeft className="h-4 w-4" /> {prev.title}
               </Link>
             ) : (
               <span />
             )}
             {next && (
-              <Link
-                href={`/tutorial/${next.slug}`}
-                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 font-black text-emerald-950 hover:bg-emerald-400"
-              >
+              <Link href={`/tutorial/${next.slug}`} className="btn btn-ink px-4 py-2">
                 {next.title} <ArrowRight className="h-4 w-4" />
               </Link>
             )}

@@ -21,7 +21,7 @@ import { Markdown } from "@/components/Markdown";
 import { OutputPanel } from "@/components/OutputPanel";
 import { PyodideStatus } from "@/components/PyodideStatus";
 import { ChallengeIcon } from "@/components/icons/ChallengeIcon";
-import { LevelLogo } from "@/components/icons/Logos";
+import { Enso, Hanko, LevelLogo } from "@/components/icons/Logos";
 import { MiniMap } from "@/components/map/MiniMap";
 import { ensureRunner, runCode, runTests, type RunResult, type TestRun } from "@/lib/pyodide/runner";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
@@ -131,47 +131,44 @@ export function ChallengeView({ challengeId }: { challengeId: string }) {
   const canSeeSolution = isDone || attempts >= SOLUTION_AFTER_ATTEMPTS;
 
   if (!hydrated || !unlocked) {
-    return <div className="flex flex-1 items-center justify-center text-zinc-500">Cargando reto…</div>;
+    return (
+      <div className="font-display flex flex-1 items-center justify-center text-lg text-ink-3">Preparando la tinta…</div>
+    );
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Barra superior */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-zinc-800/80 px-3 py-2">
-        <Link
-          href="/jugar"
-          className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-          title="Volver al mapa"
-        >
+      <div className="flex shrink-0 items-center gap-3 border-b border-rule bg-paper-3/50 px-3 py-2">
+        <Link href="/jugar" className="btn-ghost p-1.5" title="Volver al mapa" aria-label="Volver al mapa">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <LevelLogo level={challenge.level} className="h-8 w-8 shrink-0" />
+        <LevelLogo level={challenge.level} className="h-9 w-9 shrink-0" />
         <div className="min-w-0">
-          <p className={`truncate text-[11px] font-black uppercase tracking-wider ${theme.text}`}>
+          <p className={`truncate text-[11px] font-black uppercase tracking-[0.2em] ${theme.text}`}>
             {level.name} · Reto {challenge.number}/{level.challenges.length}
           </p>
-          <h1 className="flex items-center gap-1.5 truncate font-black text-zinc-50">
-            <ChallengeIcon name={challenge.icon} className={`h-4 w-4 shrink-0 ${theme.text}`} />
+          <h1 className="font-display flex items-center gap-2 truncate text-xl font-extrabold leading-tight text-ink">
             {challenge.title}
-            {isDone && <CheckCircle2 className="h-4 w-4 shrink-0 text-amber-400" />}
+            {isDone && <Hanko className="h-6 w-6 shrink-0 rotate-[-8deg] text-xs" />}
           </h1>
         </div>
         <div className="ml-auto hidden xl:block">
           <MiniMap activeId={challengeId} />
         </div>
-        <div className="ml-auto hidden sm:block xl:ml-4">
+        <div className="ml-auto hidden sm:block xl:ml-5">
           <PyodideStatus />
         </div>
       </div>
 
       {/* Pestañas móvil */}
-      <div className="flex shrink-0 border-b border-zinc-800 lg:hidden">
+      <div className="flex shrink-0 border-b border-rule lg:hidden">
         {(["reto", "codigo", "resultado"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setMobileTab(t)}
             className={`flex-1 py-2 text-sm font-bold capitalize ${
-              mobileTab === t ? `border-b-2 ${theme.border} text-zinc-50` : "text-zinc-500"
+              mobileTab === t ? "border-b-[3px] border-seal text-ink" : "text-ink-3"
             }`}
           >
             {t === "codigo" ? "Código" : t}
@@ -179,33 +176,33 @@ export function ChallengeView({ challengeId }: { challengeId: string }) {
         ))}
       </div>
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(320px,2fr)_3fr]">
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(340px,2fr)_3fr]">
         {/* Enunciado */}
         <aside
-          className={`${mobileTab === "reto" ? "flex" : "hidden"} min-h-0 flex-col overflow-y-auto border-zinc-800 p-5 scrollbar-thin lg:flex lg:border-r`}
+          className={`${mobileTab === "reto" ? "flex" : "hidden"} min-h-0 flex-col overflow-y-auto border-rule px-6 py-5 scrollbar-thin lg:flex lg:border-r-2 lg:border-r-ink`}
         >
-          <span
-            className={`mb-3 w-fit rounded-full ${theme.bgSoft} px-2.5 py-0.5 text-xs font-bold ${theme.text}`}
-          >
+          <span className={`tag mb-4 w-fit ${theme.text}`}>
+            <ChallengeIcon name={challenge.icon} className="h-3.5 w-3.5" />
             {challenge.topic}
           </span>
           <Markdown>{challenge.description}</Markdown>
 
-          <div className="mt-6">
-            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-black text-zinc-300">
-              <FlaskConical className="h-4 w-4" /> Tests a superar ({challenge.tests.length})
+          <div className="mt-7">
+            <h3 className="font-display mb-2 flex items-center gap-2 text-base font-extrabold text-ink">
+              <FlaskConical className="h-4 w-4" /> Tests a superar
+              <span className="text-ink-3">({challenge.tests.length})</span>
             </h3>
-            <ul className="space-y-1 text-sm text-zinc-400">
+            <ul className="divide-y divide-rule border-y border-rule text-sm text-ink-2">
               {challenge.tests.map((t, i) => {
                 const r = testRun?.results[i];
                 return (
-                  <li key={t.name} className="flex items-start gap-2">
+                  <li key={t.name} className="flex items-start gap-2.5 py-1.5">
                     {!r ? (
-                      <CircleDashed className="mt-0.5 h-4 w-4 shrink-0 text-zinc-600" />
+                      <CircleDashed className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" />
                     ) : r.passed ? (
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-bamboo" />
                     ) : (
-                      <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                      <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-seal" />
                     )}
                     {t.name}
                   </li>
@@ -214,18 +211,18 @@ export function ChallengeView({ challengeId }: { challengeId: string }) {
             </ul>
           </div>
 
-          <div className="mt-6 space-y-2">
+          <div className="mt-7 space-y-3">
             {challenge.hints.slice(0, hintsShown).map((h, i) => (
-              <div key={i} className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                <Markdown className="text-amber-100">{`**Pista ${i + 1}:** ${h}`}</Markdown>
+              <div
+                key={i}
+                className="ink-in relative border-l-[3px] border-seal bg-paper-3/70 py-2 pl-4 pr-3 text-sm"
+              >
+                <Markdown>{`**Pista ${i + 1}.** ${h}`}</Markdown>
               </div>
             ))}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2.5">
               {hintsShown < challenge.hints.length && (
-                <button
-                  onClick={() => setHintsShown((n) => n + 1)}
-                  className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 px-3 py-1.5 text-sm font-bold text-amber-300 hover:bg-amber-500/10"
-                >
+                <button onClick={() => setHintsShown((n) => n + 1)} className="btn btn-paper px-3 py-1.5 text-sm">
                   <Lightbulb className="h-4 w-4" /> {hintsShown ? "Otra pista" : "Ver pista"}
                 </button>
               )}
@@ -233,22 +230,19 @@ export function ChallengeView({ challengeId }: { challengeId: string }) {
                 <Link
                   href={`/tutorial/${challenge.tutorialLink}`}
                   target="_blank"
-                  className="flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-sm font-bold text-zinc-300 hover:bg-zinc-800"
+                  className="btn btn-paper px-3 py-1.5 text-sm"
                 >
                   <BookOpen className="h-4 w-4" /> Repasar en el tutorial
                 </Link>
               )}
               {canSeeSolution && (
-                <button
-                  onClick={showSolution}
-                  className="flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-sm font-bold text-zinc-300 hover:bg-zinc-800"
-                >
+                <button onClick={showSolution} className="btn btn-paper px-3 py-1.5 text-sm">
                   <KeyRound className="h-4 w-4" /> Ver solución
                 </button>
               )}
             </div>
             {!canSeeSolution && attempts > 0 && (
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-ink-3">
                 La solución se desbloquea tras {SOLUTION_AFTER_ATTEMPTS} intentos ({attempts}/
                 {SOLUTION_AFTER_ATTEMPTS}).
               </p>
@@ -257,56 +251,43 @@ export function ChallengeView({ challengeId }: { challengeId: string }) {
         </aside>
 
         {/* Editor + resultados */}
-        <section
-          className={`${mobileTab === "reto" ? "hidden" : "flex"} min-h-0 flex-col lg:flex`}
-        >
+        <section className={`${mobileTab === "reto" ? "hidden" : "flex"} min-h-0 flex-col lg:flex`}>
           <div className={`${mobileTab === "codigo" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex`}>
-            <div className="min-h-0 flex-1">
+            <div className="min-h-0 flex-1 bg-paper-3">
               <CodeEditor value={code} onChange={onChange} onRun={run} onTest={test} />
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2 border-y border-zinc-800 bg-zinc-950 px-3 py-2">
-              <button
-                onClick={run}
-                disabled={busy}
-                className="flex items-center gap-1.5 rounded-xl bg-zinc-100 px-4 py-2 text-sm font-black text-zinc-900 shadow-[0_4px_0_0_#71717a] transition hover:bg-white active:translate-y-1 active:shadow-none disabled:opacity-50"
-                title="Ctrl+Enter"
-              >
+            <div className="flex shrink-0 flex-wrap items-center gap-3 border-y-2 border-ink bg-paper-2/70 px-3 py-2.5">
+              <button onClick={run} disabled={busy} className="btn btn-ink px-4 py-1.5 text-sm" title="Ctrl+Enter">
                 <Play className="h-4 w-4 fill-current" /> Ejecutar
               </button>
-              <button
-                onClick={test}
-                disabled={busy}
-                className={`flex items-center gap-1.5 rounded-xl ${theme.bg} px-4 py-2 text-sm font-black text-white ${theme.shadow} transition hover:brightness-110 active:translate-y-1 active:shadow-none disabled:opacity-50`}
-                title="Ctrl+Shift+Enter"
-              >
+              <button onClick={test} disabled={busy} className="btn btn-seal px-4 py-1.5 text-sm" title="Ctrl+Shift+Enter">
                 <FlaskConical className="h-4 w-4" /> Correr tests
               </button>
-              <button
-                onClick={restore}
-                className="ml-auto flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                title="Restaurar código inicial"
-              >
+              <span className="hidden text-xs text-ink-3 md:inline">
+                <kbd className="font-mono">Ctrl+Enter</kbd> ejecutar · <kbd className="font-mono">Ctrl+Shift+Enter</kbd> tests
+              </span>
+              <button onClick={restore} className="btn-ghost ml-auto px-3 py-1.5 text-sm" title="Restaurar código inicial">
                 <RotateCcw className="h-4 w-4" /> <span className="hidden sm:inline">Restaurar</span>
               </button>
             </div>
           </div>
 
           <div
-            className={`${mobileTab === "resultado" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex lg:h-[40%] lg:flex-none`}
+            className={`${mobileTab === "resultado" ? "flex" : "hidden"} min-h-0 flex-1 flex-col bg-paper lg:flex lg:h-[40%] lg:flex-none`}
           >
-            <div className="flex shrink-0 gap-1 px-3 pt-2">
+            <div className="flex shrink-0 gap-4 border-b border-rule px-4 pt-2">
               {(["salida", "tests"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setOutputTab(t)}
-                  className={`rounded-lg px-3 py-1 text-sm font-bold capitalize ${
-                    outputTab === t ? "bg-zinc-800 text-zinc-50" : "text-zinc-500 hover:text-zinc-200"
+                  className={`-mb-px border-b-[3px] px-1 pb-1.5 text-sm font-bold capitalize transition-colors ${
+                    outputTab === t ? "border-ink text-ink" : "border-transparent text-ink-3 hover:text-ink"
                   }`}
                 >
                   {t}
                   {t === "tests" && testRun && (
                     <span
-                      className={`ml-1.5 tabular-nums ${passedCount === challenge.tests.length ? "text-emerald-400" : "text-red-400"}`}
+                      className={`ml-1.5 tabular-nums ${passedCount === challenge.tests.length ? "text-bamboo" : "text-seal"}`}
                     >
                       {passedCount}/{challenge.tests.length}
                     </span>
@@ -314,7 +295,7 @@ export function ChallengeView({ challengeId }: { challengeId: string }) {
                 </button>
               ))}
             </div>
-            <div className="min-h-0 flex-1 overflow-auto p-3 scrollbar-thin">
+            <div className="min-h-0 flex-1 overflow-auto p-4 scrollbar-thin">
               {outputTab === "salida" ? (
                 <OutputPanel result={runResult} error={execError} />
               ) : (
@@ -338,36 +319,37 @@ export function ChallengeView({ challengeId }: { challengeId: string }) {
 }
 
 function TestResults({ run, error, total }: { run: TestRun | null; error: string | null; total: number }) {
-  if (error) return <pre className="whitespace-pre-wrap font-mono text-sm text-red-400">{error}</pre>;
+  if (error) return <pre className="whitespace-pre-wrap font-mono text-sm text-seal">{error}</pre>;
   if (!run)
     return (
-      <p className="text-sm text-zinc-500">
-        Pulsa <b>Correr tests</b> (Ctrl+Shift+Enter) para comprobar tu solución. Debes pasar los {total}{" "}
-        tests para completar el reto.
+      <p className="text-sm text-ink-3">
+        Pulsa <b className="text-ink">Correr tests</b> para comprobar tu solución. Debes pasar los {total} tests para
+        ganar el sello de este reto.
       </p>
     );
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {run.error && (
-        <pre className="whitespace-pre-wrap rounded-lg border border-red-500/30 bg-red-500/10 p-3 font-mono text-sm text-red-300">
+        <pre className="whitespace-pre-wrap border-l-[3px] border-seal bg-seal/5 p-3 font-mono text-sm text-seal-dark">
           {run.error}
         </pre>
       )}
-      {run.results.map((r) => (
+      {run.results.map((r, i) => (
         <div
           key={r.name}
-          className={`rounded-xl border p-3 ${r.passed ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"}`}
+          className={`ink-in border-l-[3px] bg-paper-3/80 px-3 py-2 ${r.passed ? "border-bamboo" : "border-seal"}`}
+          style={{ ["--d" as string]: i * 0.6 }}
         >
-          <p className="flex items-center gap-2 text-sm font-bold">
+          <p className="flex items-center gap-2 text-sm font-bold text-ink">
             {r.passed ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-bamboo" />
             ) : (
-              <XCircle className="h-4 w-4 text-red-400" />
+              <XCircle className="h-4 w-4 shrink-0 text-seal" />
             )}
             {r.name}
           </p>
           {r.message && (
-            <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap font-mono text-xs text-zinc-300 scrollbar-thin">
+            <pre className="mt-1.5 max-h-60 overflow-auto whitespace-pre-wrap font-mono text-xs text-ink-2 scrollbar-thin">
               {r.message}
             </pre>
           )}
@@ -392,43 +374,38 @@ function SuccessModal({
   const level = LEVELS.find((l) => l.id === challenge.level)!;
   const levelDone = challenge.number === level.challenges.length;
   const nextLevel = LEVELS[LEVELS.indexOf(level) + 1];
-  const theme = LEVEL_THEME[challenge.level];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-3xl border border-zinc-700 bg-zinc-900 p-6 text-center shadow-2xl">
-        {levelDone ? (
-          <LevelLogo level={challenge.level} className="animate-float mx-auto h-24 w-24" />
-        ) : (
-          <div
-            className={`animate-float mx-auto flex h-20 w-20 items-center justify-center rounded-full ${theme.bg} ${theme.shadow}`}
-          >
-            <ChallengeIcon name={challenge.icon} className="h-10 w-10 text-white" />
-          </div>
-        )}
-        <h2 className="mt-5 text-2xl font-black text-zinc-50">
-          {levelDone ? `¡${level.name} completado!` : "¡Reto superado!"}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-[2px]">
+      <div className="paper-card ink-in w-full max-w-sm p-7 text-center">
+        <div className="relative mx-auto grid h-32 w-32 place-items-center">
+          {levelDone ? (
+            <LevelLogo level={challenge.level} className="h-24 w-24" />
+          ) : (
+            <Enso animated className="absolute inset-0 h-full w-full" />
+          )}
+          <Hanko className="stamp-in relative h-16 w-16 text-4xl [animation-delay:350ms]" />
+        </div>
+        <h2 className="font-display mt-4 text-3xl font-extrabold text-ink">
+          {levelDone ? `${level.name}, completado` : "¡Reto superado!"}
         </h2>
-        <p className="mt-1 text-zinc-400">
+        <p className="mt-2 text-ink-2">
           {levelDone && nextLevel
             ? `Desbloqueaste el nivel ${nextLevel.difficulty}: ${nextLevel.name}.`
             : levelDone
-              ? "¡Eres un Maestro Panda! Completaste todos los retos. 🐼"
+              ? "Completaste todos los retos. Eres un Maestro Panda."
               : `Pasaste todos los tests de “${challenge.title}”.`}
         </p>
-        <div className="mt-6 flex flex-col gap-2">
+        <div className="mt-7 flex flex-col gap-3">
           {nextHref && (
-            <Link
-              href={nextHref}
-              className="rounded-2xl bg-emerald-500 px-5 py-3 font-black text-emerald-950 shadow-[0_6px_0_0_#047857] transition hover:bg-emerald-400 active:translate-y-1 active:shadow-none"
-            >
+            <Link href={nextHref} className="btn btn-seal px-5 py-3">
               Siguiente: {nextTitle}
             </Link>
           )}
-          <Link href="/jugar" className="rounded-2xl px-5 py-2.5 font-bold text-zinc-300 hover:bg-zinc-800">
+          <Link href="/jugar" className="btn btn-paper px-5 py-2.5">
             Ver mapa
           </Link>
-          <button onClick={onClose} className="text-sm font-bold text-zinc-500 hover:text-zinc-300">
+          <button onClick={onClose} className="mt-1 text-sm font-bold text-ink-3 hover:text-ink">
             Quedarme aquí
           </button>
         </div>

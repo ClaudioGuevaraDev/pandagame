@@ -30,22 +30,19 @@ export function RunnableSnippet({ code: initial, title }: { code: string; title?
   };
 
   return (
-    <div className="my-5 overflow-hidden rounded-2xl border border-zinc-800 bg-[#1e1e1e]">
-      <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-950 px-3 py-1.5">
-        <span className="truncate text-xs font-bold text-zinc-400">{title ?? "Pruébalo"}</span>
+    <div className="paper-card my-6 overflow-hidden !rounded-[6px_12px_8px_10px] !shadow-[4px_5px_0_0_#1d1b18]">
+      <div className="flex items-center gap-2 border-b-2 border-ink bg-paper-2/70 px-3 py-1.5">
+        <span className="h-2.5 w-2.5 shrink-0 rounded-[2px] bg-seal" aria-hidden="true" />
+        <span className="truncate text-xs font-bold tracking-wide text-ink-2">{title ?? "Pruébalo"}</span>
         {code !== initial && (
-          <button
-            onClick={() => setCode(initial)}
-            className="ml-auto rounded-lg p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
-            title="Restaurar"
-          >
+          <button onClick={() => setCode(initial)} className="btn-ghost ml-auto p-1" title="Restaurar" aria-label="Restaurar">
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
         )}
         <button
           onClick={run}
           disabled={busy}
-          className={`${code !== initial ? "" : "ml-auto"} flex items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-black text-emerald-950 hover:bg-emerald-400 disabled:opacity-50`}
+          className={`${code !== initial ? "" : "ml-auto"} btn btn-ink !border-[1.5px] px-2.5 py-0.5 text-xs !shadow-[2px_2px_0_0_#c23a22]`}
           title="Ctrl+Enter"
         >
           <Play className="h-3 w-3 fill-current" /> {busy ? "Ejecutando…" : "Ejecutar"}
@@ -53,7 +50,7 @@ export function RunnableSnippet({ code: initial, title }: { code: string; title?
       </div>
       <CodeEditor value={code} onChange={setCode} onRun={run} autoHeight />
       {(result || error) && (
-        <div className="max-h-96 overflow-auto border-t border-zinc-800 bg-[#0f1115] p-3 scrollbar-thin">
+        <div className="max-h-96 overflow-auto border-t-2 border-dashed border-rule bg-paper p-3 scrollbar-thin">
           <OutputPanel result={result} error={error} />
         </div>
       )}
