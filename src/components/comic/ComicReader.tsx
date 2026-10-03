@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowLeft, ArrowRight, BookMarked, FastForward, Lock, Map as MapIcon, Play, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookMarked, FastForward, Lock, Map as MapIcon, Pause, Play, X } from "lucide-react";
 import { ALL_CHALLENGES, challengeHref } from "@/content/challenges";
 import type { Panel, Scene, Unlock } from "@/content/story/types";
 import { UNLOCK_ICONS } from "@/content/story/icons";
@@ -12,6 +12,23 @@ import { challengeNumber, nextChallenge } from "@/lib/progress/unlock";
 import { isSceneUnlocked, unlocksAfter } from "@/lib/story/unlocks";
 import { Hanko } from "@/components/icons/Logos";
 import { ComicPanel, panelText } from "./ComicPanel";
+
+/**
+ * Avance automático: cada viñeta se queda en pantalla un tiempo según cuánto
+ * texto tiene (se empieza a contar cuando termina de escribirse la narración).
+ */
+export const AUTO_ADVANCE = {
+  baseMs: 2500,
+  perCharMs: 45,
+  minMs: 3500,
+  maxMs: 10_000,
+} as const;
+
+function panelDuration(p: Panel): number {
+  const chars = (p.narration?.length ?? 0) + (p.balloons ?? []).reduce((n, b) => n + b.text.length, 0);
+  const ms = AUTO_ADVANCE.baseMs + chars * AUTO_ADVANCE.perCharMs;
+  return Math.min(AUTO_ADVANCE.maxMs, Math.max(AUTO_ADVANCE.minMs, ms));
+}
 
 const UNITS = { wide: 6, half: 3, third: 2 } as const;
 const ROW_UNITS = 6;
@@ -65,6 +82,9 @@ export function ComicReader({ scene }: { scene: Scene }) {
   const hydrated = useHasHydrated();
   const unlocked = useProgress((s) => isSceneUnlocked(scene, s.completed));
   const markSceneSeen = useProgress((s) => s.markSceneSeen);
+  const autoplayStored = useProgress((s) => s.comicAutoplay);
+  const setComicAutoplay = useProgress((s) => s.setComicAutoplay);
+  const autoplay = !hydrated || autoplayStored;
   const desktop = useMedia("(min-width: 1024px)");
   const reduced = useMedia("(prefers-reduced-motion: reduce)");
 
@@ -97,6 +117,15 @@ export function ComicReader({ scene }: { scene: Scene }) {
     else setStep((s) => Math.min(n, s + 1));
   };
   const back = () => setStep((s) => Math.max(0, s - 1));
+
+  // Avance automático cuando la viñeta ya terminó de escribirse.
+  const duration = ended ? 0 : panelDuration(scene.panels[step]);
+  const counting = autoplay && hydrated && !ended && !typing;
+  useEffect(() => {
+    if (!counting) return;
+    const t = setTimeout(() => setStep((s) => Math.min(n, s + 1)), duration);
+    return () => clearTimeout(t);
+  }, [counting, step, duration, n]);
   const skip = () => setStep(n);
 
   const onKey = useEffectEvent((e: KeyboardEvent) => {
@@ -220,13 +249,30 @@ export function ComicReader({ scene }: { scene: Scene }) {
               {scene.panels.map((_, i) => (
                 <li
                   key={i}
-                  className={`h-2 rounded-full transition-all ${i === step ? "w-6 bg-[#f6d77a]" : i < step ? "w-2 bg-paper-3" : "w-2 bg-paper-3/25"}`}
+                  className={`relative h-2 overflow-hidden rounded-full transition-all ${i === step ? "w-8 bg-[#f6d77a]/35" : i < step ? "w-2 bg-paper-3" : "w-2 bg-paper-3/25"}`}
                   aria-current={i === step ? "step" : undefined}
                 >
+                  {i === step && (
+                    // Se llena mientras corre el tiempo de la viñeta
+                    <span
+                      key={`${step}-${counting}`}
+                      className={`absolute inset-y-0 left-0 bg-[#f6d77a] ${counting ? "comic-countdown" : "w-full"}`}
+                      style={counting ? { animationDuration: `${duration}ms` } : undefined}
+                    />
+                  )}
                   <span className="sr-only">Viñeta {i + 1}</span>
                 </li>
               ))}
             </ol>
+            <button
+              onClick={() => setComicAutoplay(!autoplay)}
+              aria-pressed={autoplay}
+              aria-label="Avance automático"
+              title={autoplay ? "Pausar el avance automático" : "Activar el avance automático"}
+              className="grid h-10 w-10 place-items-center rounded-full border-2 border-paper-3/40 hover:border-paper-3"
+            >
+              {autoplay ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </button>
             <button
               onClick={advance}
               className="btn btn-seal h-10 px-4 text-sm"
@@ -237,7 +283,8 @@ export function ComicReader({ scene }: { scene: Scene }) {
           </div>
           <p className="hidden pb-3 text-center text-xs text-paper-3/60 lg:block">
             Clic, <kbd className="font-mono">Espacio</kbd> o <kbd className="font-mono">→</kbd> para continuar ·{" "}
-            <kbd className="font-mono">←</kbd> para volver
+            <kbd className="font-mono">←</kbd> para volver ·{" "}
+            {autoplay ? "avanza sola (pausa con ⏸)" : "avance automático en pausa"}
           </p>
         </>
       )}

@@ -137,7 +137,7 @@ const INDICATORS: Item[] = [
     ),
     name: "Continuar la historia",
     description:
-      "Al superar un reto aparece este botón: abre la escena de cómic que sigue (y las recompensas que ganaste). Avanza con clic, Espacio o →; «Saltar» va directo al final.",
+      "Al superar un reto aparece este botón: abre la escena de cómic que sigue (y las recompensas que ganaste). Las viñetas avanzan solas (⏸ pausa el avance automático) y también con clic, Espacio o →; «Saltar» va directo al final.",
   },
   {
     sample: (

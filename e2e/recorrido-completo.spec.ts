@@ -6,11 +6,13 @@ import { ALL_CHALLENGES, challengeHref, headerCount, runTests, setEditorCode, su
 async function readScene(page: Page, id: string) {
   await expect(page).toHaveURL(`/historia/${id}`);
   const scene = getScene(id)!;
-  for (let i = 0; i < scene.panels.length; i++) {
-    await expect(page.locator(".comic-panel").last()).toBeVisible();
-    await page.getByRole("button", { name: /^(Siguiente viñeta|Terminar escena)$/ }).click();
+  const end = page.getByText("Fin de la escena.");
+  // Con clics; si el avance automático se adelanta, no pasa nada.
+  for (let i = 0; i < scene.panels.length * 2 && !(await end.count()); i++) {
+    const next = page.getByRole("button", { name: /^(Siguiente viñeta|Terminar escena)$/ });
+    await next.click({ timeout: 5_000 }).catch(() => {});
   }
-  await expect(page.getByText("Fin de la escena.")).toBeAttached();
+  await expect(end).toBeAttached();
 }
 
 // Recorrido completo: el prólogo, los 30 retos y sus 30 escenas en orden desde

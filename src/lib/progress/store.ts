@@ -19,6 +19,8 @@ type ProgressState = {
   hintsUsed: Record<string, number>;
   /** Cuántas recompensas había la última vez que se abrió el Diario (para el aviso de "nuevo"). */
   journalSeen: number;
+  /** Las escenas de cómic avanzan solas (se puede pausar). */
+  comicAutoplay: boolean;
   saveCode: (id: string, code: string) => void;
   resetCode: (id: string) => void;
   recordAttempt: (id: string, passed: boolean) => void;
@@ -26,6 +28,7 @@ type ProgressState = {
   markSceneSeen: (id: string) => void;
   revealHint: (id: string) => void;
   markJournalSeen: (count: number) => void;
+  setComicAutoplay: (on: boolean) => void;
   resetAll: () => void;
 };
 
@@ -67,6 +70,7 @@ const initial = {
   scenesSeen: {},
   hintsUsed: {},
   journalSeen: 0,
+  comicAutoplay: true,
 };
 
 /** v3: las escenas de los retos ya completados cuentan como vistas (no se obliga a verlas). */
@@ -106,6 +110,7 @@ export const useProgress = create<ProgressState>()(
       markSceneSeen: (id) =>
         set((s) => (s.scenesSeen[id] ? s : { scenesSeen: { ...s.scenesSeen, [id]: true } })),
       revealHint: (id) => set((s) => ({ hintsUsed: { ...s.hintsUsed, [id]: (s.hintsUsed[id] ?? 0) + 1 } })),
+      setComicAutoplay: (on) => set({ comicAutoplay: on }),
       markJournalSeen: (count) => set((s) => (s.journalSeen === count ? s : { journalSeen: count })),
       resetAll: () => {
         set(initial);
@@ -126,7 +131,7 @@ export const useProgress = create<ProgressState>()(
         if (version < 3) state = { ...state, scenesSeen: seenFromCompleted(state.completed) };
         return state;
       },
-      partialize: ({ completed, attempts, code, tutorialRead, scenesSeen, hintsUsed, journalSeen }) => ({
+      partialize: ({ completed, attempts, code, tutorialRead, scenesSeen, hintsUsed, journalSeen, comicAutoplay }) => ({
         completed,
         attempts,
         code,
@@ -134,6 +139,7 @@ export const useProgress = create<ProgressState>()(
         scenesSeen,
         hintsUsed,
         journalSeen,
+        comicAutoplay,
       }),
     },
   ),

@@ -16,6 +16,10 @@ const nextButton = (page: Page) => page.getByRole("button", { name: /^(Siguiente
 
 test.describe("Lector de cómic @mobile", () => {
   test.use({ reducedMotion: "reduce" });
+  test.beforeEach(async ({ page }) => {
+    // Sin avance automático: los tests controlan el ritmo.
+    await seedProgress(page, {});
+  });
 
   test("el prólogo se lee viñeta a viñeta y termina con recompensas", async ({ page }) => {
     await page.goto("/historia/prologo");
@@ -64,20 +68,39 @@ test.describe("Lector de cómic @mobile", () => {
     const res = await page.goto("/historia/no-existe");
     expect(res?.status()).toBe(404);
   });
+});
 
-  test("la escena final cierra la historia y abre el Diario", async ({ page }) => {
-    await seedProgress(page, { completed: firstIds(30) });
-    await page.goto("/historia/capitulo-30");
-    await expect(page.getByText("Capítulo 30")).toBeVisible();
-    await page.getByRole("button", { name: "Saltar escena" }).click();
-    await expect(page.getByText("Has completado la historia.")).toBeVisible();
-    await expect(page.getByText("Sello del Maestro Panda")).toBeVisible();
-    await page.getByRole("link", { name: "Abrir el Diario de Bao" }).click();
-    await expect(page).toHaveURL("/diario");
+test("la escena final cierra la historia y abre el Diario", async ({ page }) => {
+  await seedProgress(page, { completed: firstIds(30) });
+  await page.goto("/historia/capitulo-30");
+  await expect(page.getByText("Capítulo 30")).toBeVisible();
+  await page.getByRole("button", { name: "Saltar escena" }).click();
+  await expect(page.getByText("Has completado la historia.")).toBeVisible();
+  await expect(page.getByText("Sello del Maestro Panda")).toBeVisible();
+  await page.getByRole("link", { name: "Abrir el Diario de Bao" }).click();
+  await expect(page).toHaveURL("/diario");
+});
+
+test.describe("Avance automático @mobile", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test("las viñetas avanzan solas y se puede pausar", async ({ page }) => {
+    await seedProgress(page, { comicAutoplay: true });
+    await page.goto("/historia/prologo");
+    const toggle = page.getByRole("button", { name: "Avance automático" });
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(live(page)).toContainText("Viñeta 2", { timeout: 15_000 });
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await page.waitForTimeout(11_000); // más que la viñeta más larga
+    await expect(live(page)).toContainText("Viñeta 2");
+    await expect.poll(async () => (await readProgress(page))?.state.comicAutoplay).toBe(false);
   });
 });
 
 test("la narración se escribe sola y el primer clic la completa", async ({ page }) => {
+  await seedProgress(page, {});
   await page.goto("/historia/prologo");
   const caption = page.locator(".comic-caption").first();
   await expect(caption).toBeVisible();

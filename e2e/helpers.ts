@@ -14,6 +14,8 @@ export type Progress = {
   tutorialRead?: string[];
   scenesSeen?: string[];
   hintsUsed?: Record<string, number>;
+  /** Avance automático de las escenas (por defecto apagado en los tests, para que no corra solo). */
+  comicAutoplay?: boolean;
   version?: number;
 };
 
@@ -40,6 +42,7 @@ export async function seedProgress(page: Page, p: Progress) {
       scenesSeen: Object.fromEntries((p.scenesSeen ?? []).map((s) => [s, true])),
       hintsUsed: p.hintsUsed ?? {},
       journalSeen: 0,
+      comicAutoplay: p.comicAutoplay ?? false,
     },
     // Sin escenas explícitas se siembra como v2: la migración a v3 marca como vistas
     // las escenas de lo completado (así los tests de retos no pasan por la historia).
@@ -66,6 +69,7 @@ type StoredProgress = {
     scenesSeen: Record<string, boolean>;
     hintsUsed: Record<string, number>;
     journalSeen: number;
+    comicAutoplay: boolean;
   };
   version: number;
 } | null;
