@@ -15,14 +15,30 @@ test.describe("Inicio @mobile", () => {
     expect(sw).toBeLessThanOrEqual(iw);
   });
 
-  test("sin progreso, Jugar lleva al primer reto", async ({ page }) => {
+  test("sin progreso, Jugar empieza por el prólogo de la historia", async ({ page }) => {
     await page.goto("/");
     const jugar = page.getByRole("link", { name: "Jugar" });
     await expect(jugar).toBeVisible();
+    await expect(page.getByText("Empieza la historia de Bao")).toBeVisible();
     // La barra existe pero oculta (opacity 0 + aria-hidden) hasta que haya progreso.
     await expect(page.getByRole("progressbar")).toHaveCount(0);
     await jugar.click();
+    await expect(page).toHaveURL("/historia/prologo");
+  });
+
+  test("con el prólogo visto, Jugar lleva al primer reto", async ({ page }) => {
+    await seedProgress(page, { scenesSeen: ["prologo"] });
+    await page.goto("/");
+    await page.getByRole("link", { name: "Jugar" }).click();
     await expect(page).toHaveURL(challengeHref(ALL_CHALLENGES[0]));
+  });
+
+  test("si falta ver la escena del último reto, Continuar lleva a la historia", async ({ page }) => {
+    await seedProgress(page, { completed: firstIds(3), scenesSeen: ["prologo", "capitulo-1", "capitulo-2"] });
+    await page.goto("/");
+    await expect(page.getByText(/^Historia · /)).toBeVisible();
+    await page.getByRole("link", { name: "Continuar" }).click();
+    await expect(page).toHaveURL("/historia/capitulo-3");
   });
 
   test("con progreso, Continuar lleva al reto actual y muestra el camino", async ({ page }) => {

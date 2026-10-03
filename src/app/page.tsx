@@ -31,7 +31,7 @@ export default function Home() {
         </h1>
         <div className="ink-in mt-2 flex items-center gap-3 text-ink-2" style={{ "--d": 3 }}>
           <span className="h-px w-8 bg-ink-3" />
-          <p>Aprende pandas, reto a reto.</p>
+          <p>Aprende pandas resolviendo un misterio.</p>
           <span className="h-px w-8 bg-ink-3" />
         </div>
 

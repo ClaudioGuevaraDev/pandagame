@@ -30,6 +30,9 @@ self.onmessage = async (event) => {
         JSON.stringify(event.data.tests),
       );
       self.postMessage({ id, ok: true, data: JSON.parse(out) });
+    } else if (type === "inputs") {
+      const out = pyodide.globals.get("_pg_inputs")(event.data.setup);
+      self.postMessage({ id, ok: true, data: JSON.parse(out) });
     }
   } catch (err) {
     self.postMessage({ id, ok: false, error: String(err && err.message ? err.message : err) });

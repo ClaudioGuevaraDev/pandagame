@@ -12,6 +12,8 @@ export type Progress = {
   attempts?: Record<string, number>;
   code?: Record<string, string>;
   tutorialRead?: string[];
+  scenesSeen?: string[];
+  hintsUsed?: Record<string, number>;
   version?: number;
 };
 
@@ -35,8 +37,13 @@ export async function seedProgress(page: Page, p: Progress) {
       attempts: p.attempts ?? {},
       code: p.code ?? {},
       tutorialRead: Object.fromEntries((p.tutorialRead ?? []).map((s) => [s, true])),
+      scenesSeen: Object.fromEntries((p.scenesSeen ?? []).map((s) => [s, true])),
+      hintsUsed: p.hintsUsed ?? {},
+      journalSeen: 0,
     },
-    version: p.version ?? 2,
+    // Sin escenas explícitas se siembra como v2: la migración a v3 marca como vistas
+    // las escenas de lo completado (así los tests de retos no pasan por la historia).
+    version: p.version ?? (p.scenesSeen ? 3 : 2),
   });
   await page.addInitScript(
     ([key, v]) => {
@@ -56,6 +63,9 @@ type StoredProgress = {
     attempts: Record<string, number>;
     code: Record<string, string>;
     tutorialRead: Record<string, boolean>;
+    scenesSeen: Record<string, boolean>;
+    hintsUsed: Record<string, number>;
+    journalSeen: number;
   };
   version: number;
 } | null;

@@ -3,21 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BookOpen, Map as MapIcon, Trash2 } from "lucide-react";
+import { BookMarked, BookOpen, Map as MapIcon, Trash2 } from "lucide-react";
 import { ALL_CHALLENGES } from "@/content/challenges";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
+import { ownedCollectibles } from "@/lib/story/unlocks";
 import { Hanko, PandaLogo } from "./icons/Logos";
 import { ResetProgressDialog } from "./ResetProgressDialog";
 
 const NAV = [
   { href: "/jugar", label: "Mapa", icon: MapIcon },
   { href: "/tutorial", label: "Tutorial", icon: BookOpen },
+  { href: "/diario", label: "Diario", icon: BookMarked },
 ] as const;
 
 export function Header() {
   const pathname = usePathname();
   const hydrated = useHasHydrated();
   const done = useProgress((s) => Object.keys(s.completed).length);
+  // Recompensas que todavía no se vieron en el Diario.
+  const unseen = useProgress((s) => ownedCollectibles(s.completed) - s.journalSeen);
+  const hasNews = hydrated && unseen > 0;
   const [resetOpen, setResetOpen] = useState(false);
 
   return (
@@ -44,6 +49,12 @@ export function Header() {
               <span className="relative inline-flex items-center gap-1.5">
                 <Icon className="h-4 w-4" />
                 <span className="sr-only sm:not-sr-only">{label}</span>
+                {href === "/diario" && hasNews && (
+                  <>
+                    <span className="absolute -right-2 -top-1.5 h-2.5 w-2.5 rounded-full border-2 border-paper-3 bg-seal" aria-hidden="true" />
+                    <span className="sr-only"> (hay recompensas nuevas)</span>
+                  </>
+                )}
                 {active && (
                   <svg
                     className="absolute inset-x-0 -bottom-1.5 h-1.5 w-full"

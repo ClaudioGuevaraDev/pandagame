@@ -25,6 +25,8 @@ export type Challenge = {
   icon: ChallengeIconName;
   /** Tema corto, ej. "Crear DataFrames". */
   topic: string;
+  /** Contexto de la historia (voz del narrador), se muestra sobre el enunciado. */
+  mision: string;
   /** Enunciado en markdown. */
   description: string;
   /** Python que prepara los datos (se ejecuta antes del código del usuario). */

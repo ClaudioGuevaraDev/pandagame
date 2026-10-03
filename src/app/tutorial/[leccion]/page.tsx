@@ -10,6 +10,7 @@ import { ChallengeGuide } from "@/components/ChallengeGuide";
 import { TutorialNav } from "@/components/TutorialNav";
 import { moduleNumeral } from "@/lib/theme";
 import { LessonReadMarker } from "@/components/LessonReadMarker";
+import { LessonGate } from "@/components/LessonGate";
 import { JsonLd } from "@/components/JsonLd";
 import { absoluteUrl } from "@/lib/site";
 
@@ -73,41 +74,43 @@ export default async function LessonPage(props: PageProps<"/tutorial/[leccion]">
             <p className="mt-3 max-w-xl text-lg text-ink-2">{lesson.summary}</p>
           </header>
 
-          <div className="mt-6">
-            {lesson.blocks.map((b, i) =>
-              b.type === "markdown" ? (
-                <Markdown key={i} className="my-4">
-                  {b.content}
-                </Markdown>
-              ) : b.type === "guide" ? (
-                <ChallengeGuide key={i} />
-              ) : (
-                <RunnableSnippet
-                  key={i}
-                  code={b.code}
-                  title={b.title}
-                  preview={
-                    <Markdown className="snippet-preview">{"```python\n" + b.code + "\n```"}</Markdown>
-                  }
-                />
-              ),
-            )}
-          </div>
-
-          {related.length > 0 && (
-            <div className="paper-card mt-12 p-5">
-              <h2 className="font-display text-xl font-extrabold text-ink">Practica en el juego</h2>
-              <div className="mt-3 flex flex-wrap gap-2.5">
-                {related.map((c) => (
-                  <Link key={c.id} href={challengeHref(c)} className="btn btn-paper px-3 py-1.5 text-sm">
-                    {c.title}
-                  </Link>
-                ))}
-              </div>
+          <LessonGate slug={lesson.slug}>
+            <div className="mt-6">
+              {lesson.blocks.map((b, i) =>
+                b.type === "markdown" ? (
+                  <Markdown key={i} className="my-4">
+                    {b.content}
+                  </Markdown>
+                ) : b.type === "guide" ? (
+                  <ChallengeGuide key={i} />
+                ) : (
+                  <RunnableSnippet
+                    key={i}
+                    code={b.code}
+                    title={b.title}
+                    preview={
+                      <Markdown className="snippet-preview">{"```python\n" + b.code + "\n```"}</Markdown>
+                    }
+                  />
+                ),
+              )}
             </div>
-          )}
 
-          <LessonReadMarker slug={lesson.slug} />
+            {related.length > 0 && (
+              <div className="paper-card mt-12 p-5">
+                <h2 className="font-display text-xl font-extrabold text-ink">Practica en el juego</h2>
+                <div className="mt-3 flex flex-wrap gap-2.5">
+                  {related.map((c) => (
+                    <Link key={c.id} href={challengeHref(c)} className="btn btn-paper px-3 py-1.5 text-sm">
+                      {c.title}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <LessonReadMarker slug={lesson.slug} />
+          </LessonGate>
 
           <nav aria-label="Lección anterior y siguiente" className="mt-10 flex items-center justify-between gap-4 border-t border-rule pt-6">
             {prev ? (

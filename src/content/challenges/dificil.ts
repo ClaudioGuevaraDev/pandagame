@@ -113,6 +113,7 @@ export const dificil: Challenge[] = [
     title: "Pivote",
     icon: "Table2",
     topic: "pivot_table",
+    mision: "En la cumbre, el libro mayor guarda las ventas de la tienda. Una tabla dinámica mostrará el patrón.",
     description: `La tienda de recuerdos del santuario tiene tres puestos (\`tienda\`) que venden peluches, tazas y postales. Cada fila de \`df\` es una venta con sus \`unidades\` y el \`precio\` unitario.
 
 La directora no quiere saber cuánto se vendió, sino **de qué vive cada puesto**: qué **porcentaje de los ingresos** de cada tienda aporta cada categoría.
@@ -197,6 +198,7 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     title: "Derretir",
     icon: "Droplets",
     topic: "melt",
+    mision: "Las mediciones de las crías se guardaron en un formato imposible de leer. ¿Están bien alimentadas?",
     description: `La guardería mide a sus crías una vez al año. Alguien guardó todo en formato **ancho**, mezclando la medida y el año en el nombre de la columna: \`peso_2024\`, \`altura_2024\`, \`peso_2025\`, \`altura_2025\`…
 
 Completa \`resolver(df)\` para devolver una tabla **larga y ordenada** con:
@@ -283,6 +285,7 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     title: "Índices múltiples",
     icon: "Network",
     topic: "MultiIndex, stack/unstack",
+    mision: "Bao revisa las consultas de las clínicas trimestre a trimestre en busca de alguna pista más.",
     description: `La red de clínicas veterinarias registra cada jornada con su \`clinica\`, el \`trimestre\` (\`"T1"\`…\`"T4"\`) y el número de \`consultas\`. El código inicial ya construye la Series \`s\` con las consultas totales por \`(clinica, trimestre)\`: un **MultiIndex** de dos niveles.
 
 Completa \`resolver(df)\` para que devuelva un **diccionario** con:
@@ -380,6 +383,7 @@ check_frame(r["tabla"], e["tabla"])`,
     title: "Transformar en grupo",
     icon: "Shuffle",
     topic: "groupby().transform",
+    mision: "Algunos pesos de las crías no se anotaron. Rellenarlos bien demostrará si de verdad falta comida.",
     description: `En la guardería las crías se pesan por \`sala\`. Algunos pesos (\`peso_g\`) no se anotaron y quedaron vacíos.
 
 Completa \`resolver(df)\` para devolver una **copia** de \`df\` (mismas filas y en el mismo orden) donde:
@@ -470,6 +474,7 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     title: "Ventanas",
     icon: "AppWindow",
     topic: "rolling y shift",
+    mision: "Los podómetros de las crías podrían mostrar quién se movió de noche, y a qué hora.",
     description: `Cada cría lleva un podómetro. \`df\` tiene una fila por \`cria\` y \`dia\` (1, 2, 3…) con los \`pasos\` de ese día, **desordenadas**.
 
 Completa \`resolver(df)\` para devolver la tabla ordenada por \`cria\` y \`dia\` (índice \`0, 1, 2, ...\`) con tres columnas nuevas, calculadas **por cría**:
@@ -554,6 +559,7 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     title: "Remuestreo",
     icon: "CalendarClock",
     topic: "resample",
+    mision: "La taquilla registra cada entrada. Si se agrupa por hora, quizá aparezca el visitante nocturno.",
     description: `La taquilla del santuario registra cada entrada vendida: el \`momento\` exacto (datetime) y cuántas \`personas\` entraron en ese grupo. Las filas pueden venir **desordenadas**.
 
 Completa \`resolver(df)\` para obtener un **resumen semanal** (semanas que terminan en domingo, la frecuencia \`"W"\`) con:
@@ -630,6 +636,7 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()), check_freq=False)`,
     title: "Ranking",
     icon: "Trophy",
     topic: "rank y top-N por grupo",
+    mision: "Durante la carrera de crías, Bao aprovecha para ordenar los resultados… y los almacenes.",
     description: `¡Carrera de crías! Cada corredor tiene un \`dorsal\`, su \`corredor\` (nombre), su \`categoria\` y su tiempo en \`segundos\` (**menos es mejor**).
 
 Completa \`resolver(df, n=3)\` para obtener el **podio de cada categoría**:
@@ -711,6 +718,7 @@ check_frame(resolver(otro.copy(), n=1), _ref(otro.copy(), n=1))`,
     title: "Cortes",
     icon: "Scissors",
     topic: "cut, qcut y crosstab",
+    mision: "Goro confesó, pero cree que las crías están enfermas. ¿Lo dicen las temperaturas?",
     description: `La veterinaria toma la \`temperatura\` de las crías en tres \`turno\`s (mañana, tarde, noche) y quiere ver en qué turno hay más fiebre.
 
 Completa \`resolver(df)\` para devolver un **diccionario** con:
@@ -801,6 +809,7 @@ check_frame(_norm_datos(r["datos"]), _norm_datos(e["datos"]))`,
     title: "Encadenamiento",
     icon: "Link",
     topic: "assign + pipe",
+    mision: "Para convencer a Goro, el análisis tiene que ser limpio y sin trucos: una sola cadena de métodos.",
     description: `El código de pandas experto se escribe como una **cadena de métodos**, sin variables intermedias ni modificar el DataFrame original. Ya tienes definida la función \`normalizar(df, col)\`, que devuelve una copia con una columna nueva \`col + "_norm"\` escalada entre 0 y 1.
 
 Completa \`resolver(df)\` usando **una sola cadena** que:
@@ -901,6 +910,7 @@ check_frame(resolver(otro.copy()), _ref(otro.copy()))`,
     title: "Gran final",
     icon: "Crown",
     topic: "Pipeline completo",
+    mision: "El gran final: ante todo el santuario, Bao debe demostrar con datos que hay bambú de sobra.",
     description: `¡El reto del Maestro Panda! Tienes dos tablas:
 
 - \`df\`: registros de alimentación **sucios** con \`panda\`, \`fecha\` (texto), \`kg\` (texto) y \`id_reserva\`.

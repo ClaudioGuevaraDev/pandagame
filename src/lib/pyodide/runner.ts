@@ -12,7 +12,13 @@ export type RunResult = {
   repr: string | null;
 };
 
-export type TestResult = { name: string; passed: boolean; message: string | null };
+/** Tablas esperada y obtenida (HTML con las celdas distintas marcadas), para el Catalejo. */
+export type TestDiff = { expected: string; actual: string; expectedShape: number[]; actualShape: number[] };
+
+export type TestResult = { name: string; passed: boolean; message: string | null; diff?: TestDiff | null };
+
+/** Una variable de datos preparada por el reto (para la Lupa). */
+export type InputVar = { name: string; html: string | null; repr: string | null; shape: number[] | null };
 
 export type TestRun = {
   error: string | null;
@@ -135,6 +141,10 @@ export function runCode(code: string, setup = ""): Promise<RunResult> {
 
 export function runTests(code: string, setup: string, tests: ChallengeTest[]): Promise<TestRun> {
   return exec<TestRun>({ type: "test", code, setup, tests });
+}
+
+export function inspectInputs(setup: string): Promise<InputVar[]> {
+  return exec<InputVar[]>({ type: "inputs", setup });
 }
 
 function subscribeStatus(cb: () => void) {

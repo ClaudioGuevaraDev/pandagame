@@ -2,6 +2,10 @@
 
 Juego web para aprender **pandas** (Python): 30 retos con tests repartidos en 3 niveles, un mapa de progreso y un tutorial de cero a experto. Python corre en el navegador con [Pyodide](https://pyodide.org) (sin backend) y el progreso se guarda en `localStorage`.
 
+## Historia
+
+Bao, aprendiz del Gran Archivo, investiga quién altera los registros del santuario. Cada reto tiene una *misión* que lo conecta con la trama y, al superarlo, se desbloquea una escena de cómic (prólogo + 30 capítulos, en `/historia/...`). Al avanzar se ganan pergaminos de pistas, ventajas en el editor (autocompletado, «Ver datos», comparador de tablas, pegar), lecciones del tutorial, objetos y logros, todo visible en el **Diario de Bao** (`/diario`).
+
 ## Desarrollo
 
 ```bash
@@ -41,5 +45,8 @@ pnpm test:e2e:ui     # modo interactivo
 - `src/lib/pyodide/`: arnés Python de ejecución y tests (`harness.ts`) y cliente del Web Worker (`runner.ts`).
 - `public/pyodide-worker.js`: Web Worker que carga Pyodide + pandas desde el CDN.
 - `src/lib/progress/`: progreso persistido (zustand) y reglas de desbloqueo.
+- `src/content/story/`: modo historia: escenas de cómic (`scenes/`), recompensas (`unlocks.ts`: para mover una recompensa basta con cambiar su `after`) y tipos.
+- `src/lib/story/unlocks.ts`: lo que se desbloquea (pistas, ventajas, lecciones, escenas, logros), derivado de los retos completados.
+- `src/components/comic/`: lector de cómic, viñetas, personajes y fondos en SVG.
 
 Para añadir un reto, agrégalo al array del nivel y ejecuta `pnpm validate`.

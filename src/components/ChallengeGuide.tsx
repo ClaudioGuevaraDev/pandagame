@@ -5,8 +5,12 @@ import {
   FlaskConical,
   KeyRound,
   Lightbulb,
+  BookMarked,
+  BookOpenText,
   Play,
   RotateCcw,
+  Search,
+  Telescope,
   Trash2,
 } from "lucide-react";
 import { FEATURES } from "@/lib/features";
@@ -70,7 +74,17 @@ const BUTTONS: Item[] = [
     ),
     name: "Ver pista",
     description:
-      "Muestra una pista. Cada reto tiene varias, de la más general a la más concreta: pide solo las que necesites.",
+      "Muestra una pista. Cada reto tiene varias, de la más general a la más concreta. Se desbloquean con los Pergaminos de pistas de la historia (tras los retos 3, 10 y 20); hasta entonces el botón aparece con candado.",
+  },
+  {
+    sample: (
+      <span className="btn btn-paper px-3 py-1.5 text-sm">
+        <Search className="h-4 w-4" /> Ver datos
+      </span>
+    ),
+    name: "Ver datos",
+    description:
+      "Aparece con la Lupa de Bao (tras el reto 8): abre una ventana con las tablas y variables que el reto prepara antes de tu código.",
   },
   {
     sample: (
@@ -106,6 +120,35 @@ const BUTTONS: Item[] = [
 ];
 
 const INDICATORS: Item[] = [
+  {
+    sample: (
+      <span className="block max-w-[12rem] border-2 border-ink bg-[#f6d77a] px-2 py-1 text-xs font-bold italic text-ink">
+        La figura encapuchada huyó hacia el río…
+      </span>
+    ),
+    name: "Misión",
+    description: "El recuadro amarillo sobre el enunciado: el contexto de la historia en este reto.",
+  },
+  {
+    sample: (
+      <span className="btn btn-seal px-4 py-1.5 text-sm">
+        <BookOpenText className="h-4 w-4" /> Continuar la historia
+      </span>
+    ),
+    name: "Continuar la historia",
+    description:
+      "Al superar un reto aparece este botón: abre la escena de cómic que sigue (y las recompensas que ganaste). Avanza con clic, Espacio o →; «Saltar» va directo al final.",
+  },
+  {
+    sample: (
+      <span className="flex items-center gap-1.5 text-xs font-bold text-ink">
+        <Telescope className="h-4 w-4" /> Catalejo: compara celda por celda
+      </span>
+    ),
+    name: "Catalejo",
+    description:
+      "Con el Catalejo (tras el reto 15), cuando un test falla puedes ver la tabla esperada junto a la tuya, con las celdas distintas marcadas en rojo.",
+  },
   {
     sample: (
       <span className="flex gap-4 border-b border-rule px-1 text-sm font-bold">
@@ -151,13 +194,23 @@ const INDICATORS: Item[] = [
   },
   {
     sample: (
+      <span className="flex items-center gap-1.5 text-sm font-bold text-ink">
+        <BookMarked className="h-4 w-4" /> Diario
+      </span>
+    ),
+    name: "Diario de Bao",
+    description:
+      "En el encabezado: tus objetos y ventajas, los logros y la galería de escenas. Un punto rojo avisa cuando hay recompensas nuevas.",
+  },
+  {
+    sample: (
       <span className="btn-ghost p-2">
         <Trash2 className="h-4 w-4" />
       </span>
     ),
     name: "Borrar todo el progreso",
     description:
-      "La papelera del encabezado borra tu avance, tu código y las lecciones leídas de este navegador. Pide escribir BORRAR para confirmar.",
+      "La papelera del encabezado borra tu avance, tu código, las lecciones leídas, las escenas vistas y las recompensas de este navegador. Pide escribir BORRAR para confirmar.",
   },
 ];
 

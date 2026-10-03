@@ -1,11 +1,27 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { getScene } from "../src/content/story/scenes/index.ts";
 import { ALL_CHALLENGES, challengeHref, headerCount, runTests, setEditorCode, successDialog, waitForPython } from "./helpers";
 
-// Recorrido completo: los 30 retos en orden desde la interfaz. Se corre con pnpm test:e2e:full.
-test("resuelve los 30 retos en orden desde el inicio @full", async ({ page }) => {
+/** Lee una escena entera con "Siguiente" (sin saltarla) y vuelve al juego. */
+async function readScene(page: Page, id: string) {
+  await expect(page).toHaveURL(`/historia/${id}`);
+  const scene = getScene(id)!;
+  for (let i = 0; i < scene.panels.length; i++) {
+    await expect(page.locator(".comic-panel").last()).toBeVisible();
+    await page.getByRole("button", { name: /^(Siguiente viñeta|Terminar escena)$/ }).click();
+  }
+  await expect(page.getByText("Fin de la escena.")).toBeAttached();
+}
+
+// Recorrido completo: el prólogo, los 30 retos y sus 30 escenas en orden desde
+// la interfaz. Se corre con pnpm test:e2e:full.
+test("resuelve los 30 retos y toda la historia desde el inicio @full", async ({ page }) => {
   test.setTimeout(30 * 60_000);
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("link", { name: "Jugar" }).click();
+  await readScene(page, "prologo");
+  await page.getByRole("link", { name: /^Reto 1 · / }).click();
 
   for (const [i, c] of ALL_CHALLENGES.entries()) {
     await test.step(`${i + 1}. ${c.id} ${c.title}`, async () => {
@@ -28,11 +44,14 @@ test("resuelve los 30 retos en orden desde el inicio @full", async ({ page }) =>
       if (levelEnd) await expect(dialog.getByRole("heading")).toContainText("completado");
       else await expect(dialog.getByRole("heading")).toHaveText("¡Reto superado!");
 
+      if (isLast) await expect(dialog).toContainText("Eres un Maestro Panda");
+      await dialog.getByRole("link", { name: "Continuar la historia" }).click();
+      await readScene(page, `capitulo-${i + 1}`);
       if (isLast) {
-        await expect(dialog).toContainText("Eres un Maestro Panda");
-        await dialog.getByRole("link", { name: "Ver mapa" }).click();
+        await expect(page.getByText("Has completado la historia.")).toBeVisible();
+        await page.locator("#main").getByRole("link", { name: "Mapa", exact: true }).click();
       } else {
-        await dialog.getByRole("link", { name: /^Siguiente:/ }).click();
+        await page.getByRole("link", { name: `Reto ${i + 2} · ${ALL_CHALLENGES[i + 1].title}` }).click();
       }
     });
   }
@@ -42,4 +61,12 @@ test("resuelve los 30 retos en orden desde el inicio @full", async ({ page }) =>
   await expect(page.getByRole("link", { name: /\(completado\)/ })).toHaveCount(30);
   await page.goto("/");
   await expect(page.getByText("Has completado todos los retos. Maestro Panda.")).toBeVisible();
+
+  // Diario: todos los objetos, las 31 escenas vistas y los logros de la historia.
+  await page.goto("/diario");
+  await expect(page.getByRole("tab", { name: /^Objetos (\d+)\/\1$/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^Escenas 31\/31$/ })).toBeVisible();
+  await page.getByRole("tab", { name: /^Logros/ }).click();
+  for (const name of ["Maestro Panda", "Lector de cómics", "Coleccionista", "Sin pergaminos"])
+    await expect(page.locator("#diario-panel-logros li", { hasText: name })).toContainText("(conseguido)");
 });

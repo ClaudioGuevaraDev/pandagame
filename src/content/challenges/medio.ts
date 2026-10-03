@@ -8,6 +8,7 @@ export const medio: Challenge[] = [
     title: "Huecos",
     icon: "CircleDashed",
     topic: "Valores nulos",
+    mision: "La figura encapuchada huyó hacia el río. En la clínica ribereña, alguien ha borrado datos de las fichas.",
     description: `La **clínica veterinaria** del santuario registra los chequeos de las crías, pero el termómetro y el pulsómetro fallan a veces y quedan **huecos** (\`NaN\`). Además, algunas fichas se guardaron sin el nombre del paciente.
 
 Completa \`resolver(df)\` para que devuelva un DataFrame limpio:
@@ -102,6 +103,7 @@ check_frame(resolver(otro), esperado)`,
     title: "Duplicados",
     icon: "Copy",
     topic: "Eliminar duplicados",
+    mision: "Kiko insinuó que el registro de vacunas tiene filas repetidas. ¿Refuerzos reales o registros falsificados?",
     description: `El registro de **vacunas** de la guardería tiene entradas repetidas: cuando una cría recibe un refuerzo, se añade otra fila con la misma \`cria\` y la misma \`vacuna\`, pero con otra \`fecha\` (texto \`AAAA-MM-DD\`) y otro \`lote\`.
 
 Completa \`resolver(df)\` para quedarte solo con la **aplicación más reciente** de cada combinación \`cria\` + \`vacuna\`.
@@ -189,6 +191,7 @@ check_frame(resolver(otro), esperado)`,
     title: "Tipos",
     icon: "Binary",
     topic: "Convertir tipos",
+    mision: "La tienda exportó su inventario como texto. Sin los tipos correctos, Bao no puede saber qué falta.",
     description: `La **tienda de souvenirs** exportó su inventario desde una hoja de cálculo y todo llegó como texto:
 
 - \`precio\`: con símbolo y formato local, por ejemplo \`"$1.250,50"\` (punto de miles, coma decimal).
@@ -284,6 +287,7 @@ assert list(r["oferta"]) == [True, False], f"Oferta: {list(r['oferta'])}"`,
     title: "Texto",
     icon: "Type",
     topic: "Métodos .str",
+    mision: "Faltan collares GPS. Sus códigos dicen de qué centro es cada uno: alguno podría delatar al ladrón.",
     description: `Cada collar GPS tiene un **código** con el formato \`CENTRO-AÑO-SEXO-NÚMERO\`, por ejemplo \`"qin-2019-F-07"\`. Los apodos, en cambio, se escribieron a mano y tienen **espacios de sobra** (también entre palabras).
 
 Completa \`resolver(df)\` para devolver un DataFrame **nuevo** con estas columnas, en este orden:
@@ -375,6 +379,7 @@ check_frame(resolver(otro), esperado)`,
     title: "Transformar",
     icon: "Wand",
     topic: "map y apply",
+    mision: "Para comprobar la versión de Kiko, Bao necesita saber cuánto bambú come de verdad cada cría.",
     description: `La nutricionista calcula la **ración diaria** de cada cría a partir de **varias columnas**:
 
 1. Un \`factor\` según su \`actividad\`: \`"baja"\` → 0.04, \`"media"\` → 0.05, \`"alta"\` → 0.06.
@@ -457,6 +462,7 @@ assert list(r["racion_kg"]) == [0.4, 6.5, 1.5], f"Raciones: {list(r['racion_kg']
     title: "Grupos",
     icon: "Group",
     topic: "groupby + agg",
+    mision: "Kiko jura que estuvo en el torneo por equipos la noche del robo. Los tiempos lo confirmarán… o no.",
     description: `En el **torneo de trepado** cada equipo compite en varias rondas. La tabla tiene una fila por intento: \`equipo\`, \`ronda\`, \`competidor\` y \`segundos\` que tardó en subir.
 
 Completa \`resolver(df)\` para obtener, por cada combinación de **equipo y ronda**:
@@ -541,6 +547,7 @@ check_frame(resolver(otro), esperado)`,
     title: "Varias métricas",
     icon: "Calculator",
     topic: "Agregación con nombres",
+    mision: "Las estaciones del bosque registran la temperatura cada hora. Quizá notaron algo raro de noche.",
     description: `Las **estaciones meteorológicas** del bosque envían lecturas de temperatura a distintas horas (\`hora\` de 0 a 23). Las filas llegan desordenadas.
 
 Completa \`resolver(df)\` para devolver un resumen con **una fila por \`estacion\`** y estas columnas, en este orden:
@@ -641,6 +648,7 @@ check_frame(resolver(otro), esperado)`,
     title: "Unir orillas",
     icon: "Merge",
     topic: "merge",
+    mision: "Los pedidos de bambú cruzan el río. Al unirlos con sus proveedores, Bao verá a dónde van de verdad.",
     description: `Llegan **pedidos de bambú** y hay que cruzarlos con la tabla de **proveedores**. Las claves se llaman distinto en cada tabla: \`cod_prov\` en \`pedidos\` y \`codigo\` en \`proveedores\`. Algunos pedidos traen un código que **no existe**.
 
 Completa \`resolver(pedidos, proveedores)\` para devolver un **diccionario** con dos claves:
@@ -721,6 +729,7 @@ check_series(r["kilos_por_region"], pd.Series([25], index=pd.Index(["este"], nam
     title: "Apilar",
     icon: "Layers",
     topic: "concat",
+    mision: "Hay dos almacenes con inventarios distintos. Bao debe apilarlos para encontrar lo que nadie registró.",
     description: `Los dos **almacenes** del santuario llevan su inventario en tablas con columnas **distintas**:
 
 - \`norte\`: \`articulo\`, \`cantidad\`, \`lote\`
@@ -813,6 +822,7 @@ assert list(r.index) == [0, 1, 2], "El índice debe ser continuo"`,
     title: "Calendario",
     icon: "CalendarDays",
     topic: "Fechas con to_datetime y .dt",
+    mision: "Algunos padrinos dejaron de enviar bambú de golpe. ¿Cuándo, exactamente?",
     description: `El programa de **apadrinamiento** guarda cuándo empezó y terminó cada padrinazgo, con fechas en formato **día/mes/año** (\`"15/03/2024"\`). Si el padrinazgo sigue activo, \`fin\` está vacío.
 
 Completa \`resolver(df, corte="2025-06-30")\` para devolver el DataFrame con:

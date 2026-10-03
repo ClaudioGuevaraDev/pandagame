@@ -8,6 +8,7 @@ export const facil: Challenge[] = [
     title: "Primer brote",
     icon: "Sprout",
     topic: "Crear DataFrames",
+    mision: "Lin le pide a Bao su primera tarea con el Pincel de datos: rehacer el registro de la guardería, donde faltan páginas.",
     description: `En la **guardería del santuario** cada cuidadora anota sus mediciones como **tuplas**: una por cría, con los valores en el mismo orden que una lista de nombres de columna.
 
 Completa \`resolver(registros, columnas)\` para que devuelva un **DataFrame** donde:
@@ -90,6 +91,7 @@ assert r.loc["Dango", "altura_cm"] == 52, "El valor de altura no coincide"`,
     title: "Ojos de panda",
     icon: "Eye",
     topic: "Explorar datos",
+    mision: "La tienda de recuerdos dice que su inventario no cuadra. Antes de acusar a nadie, Bao debe mirar bien los datos.",
     description: `La **tienda de souvenirs** del santuario tiene su inventario en un DataFrame \`df\`. Antes de hacer cuentas, la encargada quiere un vistazo rápido.
 
 Completa \`resolver(df)\` para que devuelva un **diccionario** con:
@@ -164,6 +166,7 @@ check_frame(r["ultimos"], otro.iloc[-2:])`,
     title: "Selector",
     icon: "Columns3",
     topic: "Seleccionar columnas",
+    mision: "Alguien entra al santuario de noche. El registro de visitas tiene demasiadas columnas: Bao debe quedarse solo con las que importan.",
     description: `El registro de **visitas al santuario** guarda muchos datos por visitante. Hay columnas de gasto (\`gasto_...\`), de horarios (\`hora_...\`) y otras.
 
 Completa \`resolver(df, prefijo)\` para que devuelva un DataFrame con:
@@ -238,6 +241,7 @@ check_frame(resolver(otro, "kg_"), otro[["ticket", "kg_bambu", "kg_fruta"]])`,
     title: "Filtro de hojas",
     icon: "Filter",
     topic: "Filtrar filas",
+    mision: "Las cuidadoras sospechan que algo pasó junto al bambú del este. ¿Qué crías jugaron más de lo normal?",
     description: `En la **guardería**, las cuidadoras registran cuántos minutos jugó cada cría hoy. Quieren saber qué crías jugaron **más que el promedio** del grupo.
 
 Completa \`resolver(df)\` para que devuelva las filas cuyo \`minutos_juego\` sea **estrictamente mayor que la media** de esa columna, con todas sus columnas y el índice reiniciado (\`0, 1, 2…\`).
@@ -304,6 +308,7 @@ assert len(r) == 0, f"Ninguna supera la media, pero se obtuvieron {len(r)} filas
     title: "Doble filtro",
     icon: "ListFilter",
     topic: "Combinar condiciones",
+    mision: "Bao lleva las huellas misteriosas a la clínica. Mientras esperan, la veterinaria necesita ayuda con sus avisos.",
     description: `La **clínica veterinaria** del santuario quiere avisar a los pacientes que necesitan revisión.
 
 Completa \`resolver(df, areas)\` para que devuelva los pacientes que cumplan **las dos** condiciones:
@@ -374,6 +379,7 @@ assert list(r["paciente"]) == ["a"], f"Pacientes obtenidos: {list(r['paciente'])
     title: "En orden",
     icon: "ArrowDownWideNarrow",
     topic: "Ordenar",
+    mision: "El torneo de trepar árboles reúne a todo el santuario, ¡quizá también al culpable! Primero, la clasificación.",
     description: `Terminó el **torneo de trepar árboles**. Los participantes compiten en categorías (\`cria\`, \`juvenil\`, \`adulto\`) y el jurado quiere publicar la tabla agrupada por categoría, **en el orden que ellos eligen**, que no es el alfabético.
 
 Completa \`resolver(df, orden)\` para que devuelva la tabla:
@@ -446,6 +452,7 @@ assert list(r["participante"]) == ["d", "c", "a", "b"], f"Orden obtenido: {list(
     title: "Nueva rama",
     icon: "GitBranchPlus",
     topic: "Columnas calculadas",
+    mision: "La página arrancada del inventario no tiene la columna del total. Quien la arrancó no quería que nadie hiciera la cuenta.",
     description: `El **inventario de bambú** anota cuántos tallos hay de cada variedad, cuántos kilos pesa cada tallo y el precio por kilo.
 
 Completa \`resolver(df)\` para que devuelva el DataFrame con **dos columnas nuevas** al final:
@@ -511,6 +518,7 @@ assert r["valor"].iloc[0] == 10.0, f"valor obtenido: {r['valor'].iloc[0]}"`,
     title: "Renombrar",
     icon: "PencilLine",
     topic: "rename y drop",
+    mision: "Las ventas de la tienda se exportaron con nombres raros y columnas ocultas. ¿Alguien intenta esconder algo?",
     description: `El sistema de la **tienda de souvenirs** exporta el registro de ventas con nombres abreviados y algunas columnas internas que empiezan con \`"tmp_"\`.
 
 Completa \`resolver(df)\` para que devuelva el DataFrame:
@@ -576,6 +584,7 @@ assert list(r.columns) == ["producto", "cantidad"], f"Columnas: {list(r.columns)
     title: "Contar bambú",
     icon: "ChartColumn",
     topic: "value_counts y unique",
+    mision: "El libro de visitas podría revelar quién visita el santuario cada noche de luna llena.",
     description: `El **libro de visitas del santuario** guarda el país de cada visitante.
 
 Completa \`resolver(df)\` para que devuelva un **diccionario** con:
@@ -649,6 +658,7 @@ assert r["pais_top"] == "Perú" and r["visitas_top"] == 3, f"Obtenido: {r['pais_
     title: "Resumen",
     icon: "Sigma",
     topic: "sum, mean y describe",
+    mision: "Antes de su guardia nocturna, Bao ayuda a la clínica con el resumen del fin de semana.",
     description: `Fin de semana en la **clínica veterinaria**. La directora quiere un resumen de los pacientes atendidos.
 
 Completa \`resolver(df)\` para que devuelva un **diccionario** con:

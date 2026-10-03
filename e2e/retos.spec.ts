@@ -115,7 +115,10 @@ test.describe("Pasar un reto", () => {
     await expect.poll(() => headerCount(page)).toBe("1/30");
     expect((await readProgress(page))?.state.completed["facil-1"]).toBeTruthy();
 
-    await dialog.getByRole("link", { name: `Siguiente: ${FACIL_2.title}` }).click();
+    await dialog.getByRole("link", { name: "Continuar la historia" }).click();
+    await expect(page).toHaveURL("/historia/capitulo-1");
+    await page.getByRole("button", { name: "Saltar escena" }).click();
+    await page.getByRole("link", { name: `Reto 2 · ${FACIL_2.title}` }).click();
     await expect(page).toHaveURL(challengeHref(FACIL_2));
     await expect(page.getByRole("heading", { level: 1 })).toContainText(FACIL_2.title);
   });
@@ -153,7 +156,12 @@ test.describe("Pasar un reto", () => {
     const dialog = successDialog(page);
     await expect(dialog.getByRole("heading")).toHaveText("Bosque de Bambú, completado");
     await expect(dialog).toContainText("Desbloqueaste el nivel Medio: Río de Datos");
-    await dialog.getByRole("link", { name: /^Siguiente:/ }).click();
+    await expect(dialog).toContainText(/Te esperan? \d* ?recompensas? en la historia/);
+    await dialog.getByRole("link", { name: "Continuar la historia" }).click();
+    await expect(page).toHaveURL("/historia/capitulo-10");
+    await page.getByRole("button", { name: "Saltar escena" }).click();
+    await expect(page.getByText("Pergamino de pistas II")).toBeVisible();
+    await page.getByRole("link", { name: /^Reto 11 · / }).click();
     await expect(page).toHaveURL(challengeHref(challenge("medio-1")));
   });
 });
@@ -166,7 +174,30 @@ test.describe("Bloqueo y navegación del reto", () => {
     await expect(page).toHaveURL("/jugar");
   });
 
+  test("sin el Pergamino de pistas, las pistas están bloqueadas", async ({ page }) => {
+    await page.goto(challengeHref(FACIL_1));
+    const enunciado = statementPanel(page);
+    await expect(enunciado.getByRole("button", { name: "Pistas bloqueadas" })).toBeDisabled();
+    await expect(enunciado.getByText(/Las pistas se desbloquean con el Pergamino de pistas I/)).toBeVisible();
+    await expect(enunciado.getByRole("button", { name: "Ver pista" })).toHaveCount(0);
+  });
+
+  test("con el primer pergamino solo se ve una pista por reto", async ({ page }) => {
+    await seedProgress(page, { completed: firstIds(3) });
+    await page.goto(challengeHref(FACIL_1));
+    const enunciado = statementPanel(page);
+    await enunciado.getByRole("button", { name: "Ver pista" }).click();
+    await expect(enunciado.getByText("Pista 1", { exact: true })).toBeVisible();
+    await expect(enunciado.getByRole("button", { name: "Otra pista" })).toHaveCount(0);
+    await expect(enunciado.getByText(/Más pistas con el Pergamino de pistas II/)).toBeVisible();
+    // La pista abierta se recuerda
+    await expect.poll(async () => (await readProgress(page))?.state.hintsUsed["facil-1"]).toBe(1);
+    await page.reload();
+    await expect(statementPanel(page).getByText("Pista 1", { exact: true })).toBeVisible();
+  });
+
   test("pistas progresivas hasta agotarse", async ({ page }) => {
+    await seedProgress(page, { completed: firstIds(20) });
     await page.goto(challengeHref(FACIL_1));
     const enunciado = statementPanel(page);
     await enunciado.getByRole("button", { name: "Ver pista" }).click();
@@ -301,6 +332,85 @@ test.describe("Pegar está bloqueado en los retos", () => {
     await page.keyboard.press("Control+A");
     await page.keyboard.press("Control+C");
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain("# escrito a mano");
+  });
+});
+
+test.describe("Ventajas de la historia", () => {
+  test("la misión de la historia aparece sobre el enunciado", async ({ page }) => {
+    await page.goto(challengeHref(FACIL_1));
+    await expect(statementPanel(page).getByText(FACIL_1.mision)).toBeVisible();
+  });
+
+  test("Lupa: sin ella no hay «Ver datos»", async ({ page }) => {
+    await seedProgress(page, { completed: firstIds(7) });
+    await page.goto(challengeHref(challenge("facil-8")));
+    await waitForPython(page);
+    await expect(page.getByRole("button", { name: "Ejecutar", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Ver datos" })).toHaveCount(0);
+  });
+
+  test("Lupa: «Ver datos» abre las tablas del reto", async ({ page }) => {
+    await seedProgress(page, { completed: firstIds(8) });
+    const c = challenge("facil-9");
+    await page.goto(challengeHref(c));
+    await waitForPython(page);
+    await page.getByRole("button", { name: "Ver datos" }).click();
+    const dialog = page.getByRole("dialog", { name: "Datos del reto" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("table.df").first()).toBeVisible();
+    await dialog.getByRole("button", { name: "Cerrar" }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test("Catalejo: sin él solo hay un aviso; con él se comparan las tablas", async ({ page }) => {
+    const wrong = FACIL_1.solution.replace("tabla.set_index(columnas[0])", "tabla.set_index(columnas[0]).head(3)");
+    await seedProgress(page, { completed: firstIds(3) });
+    await page.goto(challengeHref(FACIL_1));
+    await waitForPython(page);
+    await setEditorCode(page, wrong);
+    await runTests(page);
+    await expect(testsPanel(page).getByText(/Con el Catalejo/).first()).toBeVisible();
+    await expect(testsPanel(page).getByText("Catalejo: compara celda por celda")).toHaveCount(0);
+  });
+
+  test("Catalejo: marca las celdas distintas", async ({ page }) => {
+    const wrong = FACIL_1.solution.replace("tabla.set_index(columnas[0])", "tabla.set_index(columnas[0]).head(3)");
+    await seedProgress(page, { completed: firstIds(15) });
+    await page.goto(challengeHref(FACIL_1));
+    await waitForPython(page);
+    await setEditorCode(page, wrong);
+    await runTests(page);
+    await expect(testsPanel(page).getByText("Catalejo: compara celda por celda").first()).toBeVisible();
+    expect(await testsPanel(page).locator("table.df .diff").count()).toBeGreaterThan(0);
+  });
+
+  test("Brújula: el autocompletado de pandas aparece solo con ella", async ({ page }) => {
+    await page.goto(challengeHref(FACIL_1));
+    await typeInEditor(page, "\nx = pd.");
+    await page.waitForTimeout(800);
+    await expect(page.locator(".suggest-widget.visible")).toHaveCount(0);
+
+    await page.evaluate(() => localStorage.clear());
+    await seedProgress(page, { completed: firstIds(5) });
+    await page.goto(challengeHref(challenge("facil-6")));
+    await typeInEditor(page, "\nx = pd.");
+    await expect(page.locator(".suggest-widget.visible")).toContainText("DataFrame");
+  });
+});
+
+test.describe("Pincel del maestro", () => {
+  test.use({ permissions: ["clipboard-read", "clipboard-write"] });
+
+  test("tras el reto 20 se puede pegar en los retos", async ({ page }) => {
+    await seedProgress(page, { completed: firstIds(20) });
+    await page.goto(challengeHref(FACIL_1));
+    await waitForEditor(page);
+    await page.evaluate(() => navigator.clipboard.writeText("\nPEGADO_CON_PINCEL = 1"));
+    await page.locator(".monaco-editor .view-lines").first().click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.press("Control+V");
+    await expect.poll(() => getEditorCode(page)).toContain("PEGADO_CON_PINCEL");
+    await expect(page.getByText(/escribe tu propio código/)).toHaveCount(0);
   });
 });
 

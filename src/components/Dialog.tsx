@@ -9,6 +9,8 @@ type Props = {
   /** id de la descripción (aria-describedby). */
   describedBy?: string;
   className?: string;
+  /** Ancho máximo: "sm" (por defecto) o "lg" para contenido amplio como tablas. */
+  size?: "sm" | "lg";
   children: ReactNode;
 };
 
@@ -17,7 +19,7 @@ type Props = {
  * superior, vuelve inerte el resto de la página y atrapa el foco. Escape y el
  * clic en el fondo llaman a onClose; al cerrarse, el foco vuelve a donde estaba.
  */
-export function Dialog({ onClose, labelledBy, describedBy, className = "", children }: Props) {
+export function Dialog({ onClose, labelledBy, describedBy, className = "", size = "sm", children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const close = useEffectEvent(onClose);
 
@@ -49,7 +51,7 @@ export function Dialog({ onClose, labelledBy, describedBy, className = "", child
       ref={ref}
       aria-labelledby={labelledBy}
       aria-describedby={describedBy}
-      className="paper-card ink-in m-auto w-[calc(100%-2rem)] max-w-sm p-0 text-ink"
+      className={`paper-card ink-in m-auto w-[calc(100%-2rem)] p-0 text-ink ${size === "lg" ? "max-w-3xl" : "max-w-sm"}`}
     >
       {/* El padding va dentro: un clic sobre el propio <dialog> se trata como clic en el fondo. */}
       <div className={className}>{children}</div>

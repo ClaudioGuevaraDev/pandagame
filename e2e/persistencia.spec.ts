@@ -20,10 +20,12 @@ test("migra el progreso v1: conserva lo completado y descarta el código", async
     tutorialRead: ["fundamentos"],
   });
   await page.goto("/jugar");
-  await expect.poll(async () => (await readProgress(page))?.version).toBe(2);
+  await expect.poll(async () => (await readProgress(page))?.version).toBe(3);
   const p = (await readProgress(page))!;
   expect(Object.keys(p.state.completed)).toEqual(firstIds(3));
   expect(p.state.code).toEqual({});
+  // v3: las escenas de lo ya completado cuentan como vistas
+  expect(Object.keys(p.state.scenesSeen).sort()).toEqual(["capitulo-1", "capitulo-2", "capitulo-3", "prologo"]);
   expect(p.state.attempts["facil-4"]).toBe(2);
   expect(p.state.tutorialRead.fundamentos).toBe(true);
   await expect.poll(() => headerCount(page)).toBe("3/30");

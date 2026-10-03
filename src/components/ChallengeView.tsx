@@ -7,6 +7,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   BookOpen,
+  BookOpenText,
+  Gift,
   CheckCircle2,
   CircleHelp,
   CircleDashed,
@@ -16,9 +18,12 @@ import {
   Lock,
   Play,
   RotateCcw,
+  Search,
+  Telescope,
   XCircle,
 } from "lucide-react";
-import { LEVELS, challengeHref } from "@/content/challenges";
+import { LEVELS } from "@/content/challenges";
+import { sceneAfter, sceneHref } from "@/content/story/scenes";
 import type { Challenge, Level } from "@/content/types";
 import { CodeEditor } from "@/components/CodeEditor";
 import { Dialog } from "@/components/Dialog";
@@ -28,10 +33,19 @@ import { Tabs, tabPanelProps } from "@/components/Tabs";
 import { ChallengeIcon } from "@/components/icons/ChallengeIcon";
 import { Enso, Hanko, LevelLogo } from "@/components/icons/Logos";
 import { MiniMap } from "@/components/map/MiniMap";
-import { ensureRunner, runCode, runTests, type RunResult, type TestRun } from "@/lib/pyodide/runner";
+import {
+  ensureRunner,
+  inspectInputs,
+  runCode,
+  runTests,
+  type InputVar,
+  type RunResult,
+  type TestRun,
+} from "@/lib/pyodide/runner";
 import { FEATURES } from "@/lib/features";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
-import { isChallengeUnlocked, nextChallenge } from "@/lib/progress/unlock";
+import { isChallengeUnlocked } from "@/lib/progress/unlock";
+import { hasPerk, hintsAllowed, nextHintScroll, perkUnlock, unlockSource, unlocksAfter } from "@/lib/story/unlocks";
 import { LEVEL_THEME } from "@/lib/theme";
 
 const SOLUTION_AFTER_ATTEMPTS = 3;
@@ -68,10 +82,22 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
   const doneStored = useProgress((s) => !!s.completed[challengeId]);
   const attemptsStored = useProgress((s) => s.attempts[challengeId] ?? 0);
   const savedCode = useProgress((s) => s.code[challengeId]);
+  const hintsUsedStored = useProgress((s) => s.hintsUsed[challengeId] ?? 0);
+  const completed = useProgress((s) => s.completed);
   const unlocked = !hydrated || unlockedStored;
   const isDone = hydrated && doneStored;
   const attempts = hydrated ? attemptsStored : 0;
-  const { saveCode, resetCode, recordAttempt } = useProgress.getState();
+  const { saveCode, resetCode, recordAttempt, revealHint } = useProgress.getState();
+
+  // Lo que la historia ya desbloqueó (antes de hidratar: nada).
+  const owned = hydrated ? completed : {};
+  const allowedHints = Math.min(hintsAllowed(owned), hints.length);
+  const hintsShown = Math.min(hydrated ? hintsUsedStored : 0, allowedHints);
+  const nextScroll = nextHintScroll(owned);
+  const canSuggest = hasPerk("autocompletar", owned);
+  const canInspect = hasPerk("ver-datos", owned);
+  const canCompare = hasPerk("comparar", owned);
+  const canPaste = hasPerk("pegar", owned);
 
   // Código en edición; hasta que el usuario escriba, se usa el guardado o el inicial.
   const [draft, setDraft] = useState<string | null>(null);
@@ -83,14 +109,14 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
   const [execError, setExecError] = useState<string | null>(null);
   const [outputTab, setOutputTab] = useState<OutputTab>("salida");
   const [mobileTab, setMobileTab] = useState<MobileTab>("reto");
-  const [hintsShown, setHintsShown] = useState(0);
+  const [inputs, setInputs] = useState<InputVar[] | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [pasteNotice, setPasteNotice] = useState(false);
   const pasteTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const onPasteBlocked = () => {
     setPasteNotice(true);
-    setAnnouncement("Pegar está desactivado en los retos.");
+    setAnnouncement("Pegar está desactivado en los retos hasta conseguir el Pincel del maestro.");
     clearTimeout(pasteTimer.current);
     pasteTimer.current = setTimeout(() => setPasteNotice(false), PASTE_NOTICE_MS);
   };
@@ -185,6 +211,19 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
     }
   };
 
+  const inspect = async () => {
+    if (!startBusy()) return;
+    try {
+      setInputs(await inspectInputs(challenge.setup));
+      setAnnouncement("Datos del reto abiertos.");
+    } catch (e) {
+      setExecError((e as Error).message);
+      setAnnouncement((e as Error).message);
+    } finally {
+      endBusy();
+    }
+  };
+
   const restore = () => {
     if (!confirm("¿Restaurar el código inicial? Perderás tu código actual de este reto.")) return;
     // Se descarta el guardado pendiente para que no reviva el código anterior.
@@ -199,7 +238,7 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
     onChange(challenge.solution);
   };
 
-  const next = nextChallenge(challengeId);
+  const scene = sceneAfter(challengeId);
   const passedCount = testRun?.results.filter((r) => r.passed).length ?? 0;
   // La solución está oculta mientras FEATURES.showSolution sea false.
   const canSeeSolution = FEATURES.showSolution && (isDone || attempts >= SOLUTION_AFTER_ATTEMPTS);
@@ -245,7 +284,7 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
             title="Cómo funcionan los retos"
           >
             <CircleHelp className="h-4 w-4" />
-            <span className="sr-only lg:not-sr-only">¿Cómo funciona?</span>
+            <span className="sr-only whitespace-nowrap 2xl:not-sr-only">¿Cómo funciona?</span>
           </Link>
           <span className="hidden sm:block">
             <PyodideStatus />
@@ -278,6 +317,10 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
           aria-label="Enunciado"
           className={`${mobileTab === "reto" ? "flex" : "hidden"} min-h-0 flex-col overflow-y-auto border-rule px-6 py-5 scrollbar-thin lg:flex lg:border-r-2 lg:border-r-ink`}
         >
+          <p className="mb-4 border-2 border-ink bg-[#f6d77a] px-3 py-2 text-sm font-bold italic leading-snug text-ink shadow-hand-sm">
+            <span className="sr-only">Historia: </span>
+            {challenge.mision}
+          </p>
           <span className={`tag mb-4 w-fit ${theme.text}`}>
             <ChallengeIcon name={challenge.icon} className="h-3.5 w-3.5" />
             {challenge.topic}
@@ -322,9 +365,14 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
               </div>
             ))}
             <div className="flex flex-wrap gap-2.5">
-              {hintsShown < hints.length && (
-                <button onClick={() => setHintsShown((n) => n + 1)} className="btn btn-paper px-3 py-1.5 text-sm">
+              {hintsShown < allowedHints && (
+                <button onClick={() => revealHint(challengeId)} className="btn btn-paper px-3 py-1.5 text-sm">
                   <Lightbulb className="h-4 w-4" /> {hintsShown ? "Otra pista" : "Ver pista"}
+                </button>
+              )}
+              {allowedHints === 0 && hints.length > 0 && (
+                <button disabled className="btn btn-paper px-3 py-1.5 text-sm opacity-60" aria-describedby="hint-lock">
+                  <Lock className="h-4 w-4" /> Pistas bloqueadas
                 </button>
               )}
               {challenge.tutorialLink && (
@@ -338,6 +386,13 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
                 </button>
               )}
             </div>
+            {hintsShown >= allowedHints && allowedHints < hints.length && nextScroll && (
+              <p id="hint-lock" className="flex items-center gap-1.5 text-xs text-ink-3">
+                <Lock className="h-3.5 w-3.5 shrink-0" />
+                {allowedHints === 0 ? "Las pistas se desbloquean" : "Más pistas"} con el {nextScroll.name}: lo obtendrás tras{" "}
+                {unlockSource(nextScroll)}.
+              </p>
+            )}
             {FEATURES.showSolution && !canSeeSolution && attempts > 0 && (
               <p className="text-xs text-ink-3">
                 La solución se desbloquea tras {SOLUTION_AFTER_ATTEMPTS} intentos ({attempts}/
@@ -360,15 +415,16 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
                 onChange={onChange}
                 onRun={run}
                 onTest={test}
-                allowPaste={false}
+                allowPaste={canPaste}
                 onPasteBlocked={onPasteBlocked}
+                suggestions={canSuggest}
               />
               {pasteNotice && (
                 <p
                   className="ink-in pointer-events-none absolute left-1/2 top-3 z-10 -translate-x-1/2 whitespace-nowrap rounded-[8px_12px_8px_10px] border-2 border-seal bg-paper-3 px-3 py-1.5 text-sm font-bold text-ink shadow-hand-sm"
                   aria-hidden="true"
                 >
-                  Pegar está desactivado en los retos: escribe tu propio código ✍️
+                  Pegar está desactivado: escribe tu propio código ✍️ (llegará con el Pincel del maestro)
                 </p>
               )}
             </div>
@@ -384,7 +440,17 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
               >
                 <FlaskConical className="h-4 w-4" /> Correr tests
               </button>
-              <span className="hidden text-xs text-ink-3 md:inline">
+              {canInspect && (
+                <button
+                  onClick={inspect}
+                  disabled={busy}
+                  className="btn btn-paper px-3 py-1.5 text-sm"
+                  title="Lupa de Bao: ver los datos de entrada del reto"
+                >
+                  <Search className="h-4 w-4" /> Ver datos
+                </button>
+              )}
+              <span className="hidden text-xs text-ink-3 xl:inline">
                 <kbd className="font-mono">Ctrl+Enter</kbd> ejecutar · <kbd className="font-mono">Ctrl+Shift+Enter</kbd> tests
               </span>
               <button onClick={restore} className="btn-ghost ml-auto px-3 py-1.5 text-sm" title="Restaurar código inicial">
@@ -440,7 +506,7 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
               hidden={outputTab !== "tests"}
               className="min-h-0 flex-1 overflow-auto p-4 scrollbar-thin"
             >
-              <TestResults run={testRun} error={execError} total={challenge.tests.length} />
+              <TestResults run={testRun} error={execError} total={challenge.tests.length} compare={canCompare} />
             </div>
           </div>
         </div>
@@ -451,15 +517,27 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
           challenge={challenge}
           level={level}
           onClose={() => setCelebrate(false)}
-          nextHref={next ? challengeHref(next) : null}
-          nextTitle={next?.title}
+          storyHref={scene ? sceneHref(scene) : null}
         />
       )}
+      {inputs && <InputsDialog inputs={inputs} onClose={() => setInputs(null)} />}
     </div>
   );
 }
 
-function TestResults({ run, error, total }: { run: TestRun | null; error: string | null; total: number }) {
+const CATALEJO = perkUnlock("comparar");
+
+function TestResults({
+  run,
+  error,
+  total,
+  compare,
+}: {
+  run: TestRun | null;
+  error: string | null;
+  total: number;
+  compare: boolean;
+}) {
   if (error) return <pre className="whitespace-pre-wrap font-mono text-sm text-seal-ink">{error}</pre>;
   if (!run)
     return (
@@ -492,10 +570,37 @@ function TestResults({ run, error, total }: { run: TestRun | null; error: string
             {r.name}
             <span className="sr-only">({r.passed ? "superado" : "fallido"})</span>
           </p>
+          {r.diff && compare && (
+            <details open className="mt-2 border-t border-rule pt-2">
+              <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-bold text-ink">
+                <Telescope className="h-4 w-4" /> Catalejo: compara celda por celda
+              </summary>
+              <div className="mt-2 grid gap-3 xl:grid-cols-2">
+                {(["expected", "actual"] as const).map((k) => (
+                  <div key={k} className="min-w-0">
+                    <p className="kicker mb-1 text-ink-3">
+                      {k === "expected" ? "Esperado" : "Tu resultado"} ·{" "}
+                      {(k === "expected" ? r.diff!.expectedShape : r.diff!.actualShape).join(" × ")}
+                    </p>
+                    <div
+                      className="df-output overflow-x-auto scrollbar-thin"
+                      dangerouslySetInnerHTML={{ __html: r.diff![k] }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
           {r.message && (
             <pre className="mt-1.5 max-h-60 overflow-auto whitespace-pre-wrap font-mono text-xs text-ink-2 scrollbar-thin">
               {r.message}
             </pre>
+          )}
+          {r.diff && !compare && CATALEJO && (
+            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-ink-3">
+              <Telescope className="h-3.5 w-3.5" /> Con el {CATALEJO.name} (tras {unlockSource(CATALEJO)}) podrás comparar
+              las tablas celda por celda.
+            </p>
           )}
         </li>
       ))}
@@ -507,17 +612,16 @@ function SuccessModal({
   challenge,
   level,
   onClose,
-  nextHref,
-  nextTitle,
+  storyHref,
 }: {
   challenge: Challenge;
   level: Level;
   onClose: () => void;
-  nextHref: Route | null;
-  nextTitle?: string;
+  storyHref: Route | null;
 }) {
   const levelDone = challenge.number === level.challenges.length;
   const nextLevel = LEVELS[LEVELS.findIndex((l) => l.id === level.id) + 1];
+  const rewards = unlocksAfter(challenge.id);
 
   return (
     <Dialog onClose={onClose} labelledBy="success-title" describedBy="success-desc" className="p-7 text-center">
@@ -539,10 +643,16 @@ function SuccessModal({
             ? "Completaste todos los retos. Eres un Maestro Panda."
             : `Pasaste todos los tests de “${challenge.title}”.`}
       </p>
+      {rewards.length > 0 && (
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-sm font-bold text-seal-ink">
+          <Gift className="h-4 w-4" />
+          {rewards.length === 1 ? "Te espera una recompensa en la historia" : `Te esperan ${rewards.length} recompensas en la historia`}
+        </p>
+      )}
       <div className="mt-7 flex flex-col gap-3">
-        {nextHref && (
-          <Link href={nextHref} className="btn btn-seal px-5 py-3">
-            Siguiente: {nextTitle}
+        {storyHref && (
+          <Link href={storyHref} className="btn btn-seal px-5 py-3">
+            <BookOpenText className="h-5 w-5" /> Continuar la historia
           </Link>
         )}
         <Link href="/jugar" className="btn btn-paper px-5 py-2.5">
@@ -551,6 +661,39 @@ function SuccessModal({
         <button onClick={onClose} className="mt-1 text-sm font-bold text-ink-3 hover:text-ink">
           Quedarme aquí
         </button>
+      </div>
+    </Dialog>
+  );
+}
+
+function InputsDialog({ inputs, onClose }: { inputs: InputVar[]; onClose: () => void }) {
+  return (
+    <Dialog onClose={onClose} labelledBy="inputs-title" size="lg" className="p-6">
+      <div className="flex items-center gap-2">
+        <Search className="h-5 w-5 text-ink" />
+        <h2 id="inputs-title" className="font-display text-2xl font-extrabold text-ink">
+          Datos del reto
+        </h2>
+        <button onClick={onClose} className="btn-ghost ml-auto px-2 py-1 text-sm">
+          Cerrar
+        </button>
+      </div>
+      <p className="mt-1 text-sm text-ink-3">La Lupa de Bao muestra las variables que el reto prepara antes de tu código.</p>
+      <div className="mt-4 max-h-[60dvh] space-y-5 overflow-y-auto pr-1 scrollbar-thin">
+        {inputs.length === 0 && <p className="text-sm text-ink-2">Este reto no prepara datos de entrada.</p>}
+        {inputs.map((v) => (
+          <section key={v.name}>
+            <h3 className="font-mono text-sm font-bold text-ink">
+              {v.name}
+              {v.shape && <span className="ml-2 font-sans font-normal text-ink-3">{v.shape.join(" × ")}</span>}
+            </h3>
+            {v.html ? (
+              <div className="df-output mt-1 overflow-x-auto scrollbar-thin" dangerouslySetInnerHTML={{ __html: v.html }} />
+            ) : (
+              <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-river">{v.repr}</pre>
+            )}
+          </section>
+        ))}
       </div>
     </Dialog>
   );

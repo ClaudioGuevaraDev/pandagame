@@ -9,6 +9,10 @@ import * as icons from "lucide-react";
 import { LEVELS, ALL_CHALLENGES } from "../src/content/challenges/index.ts";
 import { LESSONS } from "../src/content/tutorial/index.ts";
 import { HARNESS } from "../src/lib/pyodide/harness.ts";
+import { SCENES } from "../src/content/story/scenes/index.ts";
+import { UNLOCKS } from "../src/content/story/unlocks.ts";
+import { UNLOCK_ICONS } from "../src/content/story/icons.ts";
+import { BACKGROUNDS, CHARACTER_IDS, MOODS, POSES, PROPS } from "../src/content/story/types.ts";
 
 type TestOutput = {
   error: string | null;
@@ -32,6 +36,60 @@ for (const level of LEVELS) {
     if (!filter && c.tutorialLink && !LESSONS.some((l) => l.slug === c.tutorialLink))
       problems.push(`${c.id}: tutorialLink "${c.tutorialLink}" no existe`);
   });
+}
+
+// Historia: una escena por reto, personajes/fondos válidos y recompensas alcanzables
+{
+  const has = <T,>(list: readonly T[], v: unknown) => list.includes(v as T);
+  const sceneIds = new Set<string>();
+  if (SCENES.filter((s) => s.after === null).length !== 1) problems.push("historia: debe haber exactamente un prólogo");
+  for (const c of ALL_CHALLENGES) {
+    if (!c.mision?.trim()) problems.push(`${c.id}: falta la misión (texto de la historia)`);
+    const n = SCENES.filter((s) => s.after === c.id).length;
+    if (n !== 1) problems.push(`${c.id}: tiene ${n} escenas después (se espera 1)`);
+  }
+  for (const s of SCENES) {
+    if (sceneIds.has(s.id)) problems.push(`escena ${s.id}: id duplicado`);
+    sceneIds.add(s.id);
+    const expectedId = s.after === null ? "prologo" : `capitulo-${ALL_CHALLENGES.findIndex((c) => c.id === s.after) + 1}`;
+    if (s.id !== expectedId) problems.push(`escena ${s.id}: debería llamarse ${expectedId}`);
+    if (s.after !== null && !ids.has(s.after)) problems.push(`escena ${s.id}: reto "${s.after}" no existe`);
+    if (!s.panels.length) problems.push(`escena ${s.id}: no tiene viñetas`);
+    s.panels.forEach((p, i) => {
+      const where = `escena ${s.id} viñeta ${i + 1}`;
+      if (!has(BACKGROUNDS, p.bg)) problems.push(`${where}: fondo "${p.bg}" no existe`);
+      if (p.prop && !has(PROPS, p.prop.name)) problems.push(`${where}: objeto "${p.prop.name}" no existe`);
+      for (const m of p.cast ?? []) {
+        if (!has(CHARACTER_IDS, m.who)) problems.push(`${where}: personaje "${m.who}" no existe`);
+        if (m.pose && !has(POSES, m.pose)) problems.push(`${where}: pose "${m.pose}" no existe`);
+        if (m.mood && !has(MOODS, m.mood)) problems.push(`${where}: expresión "${m.mood}" no existe`);
+        if (m.x < 0 || m.x > 100) problems.push(`${where}: x=${m.x} fuera de 0..100`);
+      }
+      const balloons = p.balloons ?? [];
+      if (balloons.length > 2) problems.push(`${where}: más de 2 globos`);
+      for (const b of balloons) {
+        if (!has(CHARACTER_IDS, b.who)) problems.push(`${where}: globo de "${b.who}" no existe`);
+        if (b.text.length > 120) problems.push(`${where}: globo demasiado largo (${b.text.length} > 120)`);
+      }
+      if ((p.narration?.length ?? 0) > 140) problems.push(`${where}: narración demasiado larga`);
+      if (!p.narration && !balloons.length && !p.sfx && !p.cast?.length) problems.push(`${where}: viñeta vacía`);
+    });
+  }
+  const unlockIds = new Set<string>();
+  for (const u of UNLOCKS) {
+    if (unlockIds.has(u.id)) problems.push(`recompensa ${u.id}: id duplicado`);
+    unlockIds.add(u.id);
+    if (u.after !== null && !ids.has(u.after)) problems.push(`recompensa ${u.id}: reto "${u.after}" no existe`);
+    if (!(u.icon in UNLOCK_ICONS)) problems.push(`recompensa ${u.id}: icono "${u.icon}" no registrado`);
+  }
+  for (const l of LESSONS)
+    if (!UNLOCKS.some((u) => u.lesson === l.slug)) problems.push(`lección ${l.slug}: ninguna recompensa la desbloquea`);
+  // Una lección debe estar abierta antes del primer reto que la enlaza.
+  for (const c of ALL_CHALLENGES) {
+    const u = UNLOCKS.find((x) => x.lesson === c.tutorialLink);
+    const idx = (id: string | null) => (id === null ? -1 : ALL_CHALLENGES.findIndex((x) => x.id === id));
+    if (u && idx(u.after) >= ALL_CHALLENGES.indexOf(c)) problems.push(`${c.id}: su lección "${c.tutorialLink}" se abre después del reto`);
+  }
 }
 
 // Solapes con el tutorial: ningún reto debe resolverse copiando un ejemplo.
@@ -80,6 +138,7 @@ await py.loadPackage(["pandas"]);
 py.runPython(HARNESS);
 const runTests = py.globals.get("_pg_test");
 const run = py.globals.get("_pg_run");
+const inputs = py.globals.get("_pg_inputs");
 
 function test(setup: string, code: string, tests: unknown): TestOutput {
   return JSON.parse(runTests(setup, code, JSON.stringify(tests)));
@@ -100,6 +159,8 @@ for (const c of selected) {
   if (!bad.error && bad.results.every((r) => r.passed)) {
     problems.push(`${c.id}: el código inicial pasa todos los tests`);
   }
+  const vars = JSON.parse(inputs(c.setup));
+  if (!vars.length) problems.push(`${c.id}: la Lupa («Ver datos») no encuentra datos de entrada`);
   const ran = JSON.parse(run(c.setup, c.solution));
   if (!ran.ok) problems.push(`${c.id}: la solución falla al ejecutarse: ${ran.error}`);
   console.log(`${good.error || failed.length ? "✗" : "✓"} ${c.id} ${c.title}`);

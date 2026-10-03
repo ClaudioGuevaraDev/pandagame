@@ -49,6 +49,8 @@ test.describe("Accesibilidad (axe) @mobile", () => {
     ["tutorial", "/tutorial"],
     ["lección", "/tutorial/como-funcionan-los-retos"],
     ["404", "/no-existe"],
+    ["historia", "/historia/prologo"],
+    ["diario", "/diario"],
   ];
   for (const [name, path] of pages) {
     test(`sin violaciones graves: ${name}`, async ({ page }) => {

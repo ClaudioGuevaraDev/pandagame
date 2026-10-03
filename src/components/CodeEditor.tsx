@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef } from "react";
 import type { BeforeMount, EditorProps, OnMount } from "@monaco-editor/react";
 import { EDITOR_PALETTE as E } from "@/lib/theme";
+import { enabledModels, registerPandasCompletions } from "@/lib/editor/pandas-completions";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -23,12 +24,15 @@ type Props = {
   allowPaste?: boolean;
   /** Se llama cuando se bloquea un intento de pegar o soltar texto. */
   onPasteBlocked?: () => void;
+  /** Autocompletado (sugerencias de pandas y de palabras del código). */
+  suggestions?: boolean;
 };
 
 const hex = (c: string) => c.replace("#", "");
 
 // Tema oscuro "piedra de tinta": fondo de tinta, texto crema y colores vivos.
 const defineSumiTheme: BeforeMount = (monaco) => {
+  registerPandasCompletions(monaco);
   monaco.editor.defineTheme("sumi", {
     base: "vs-dark",
     inherit: true,
@@ -84,6 +88,13 @@ const BASE_OPTIONS: EditorProps["options"] = {
   cursorBlinking: "smooth",
   fontLigatures: true,
 };
+// Sin la Brújula de bambú no hay sugerencias de ningún tipo.
+const NO_SUGGEST_OPTIONS: EditorProps["options"] = {
+  quickSuggestions: false,
+  suggestOnTriggerCharacters: false,
+  wordBasedSuggestions: "off",
+  parameterHints: { enabled: false },
+};
 // Sin menú contextual (su "Pegar" lee el portapapeles directamente) ni arrastrar/soltar.
 const NO_PASTE_OPTIONS: EditorProps["options"] = {
   contextmenu: false,
@@ -100,6 +111,7 @@ export function CodeEditor({
   ariaLabel = "Editor de código Python",
   allowPaste = true,
   onPasteBlocked,
+  suggestions = true,
 }: Props) {
   // Refs para que los atajos y listeners siempre usen la versión más reciente de los callbacks.
   const runRef = useRef(onRun);
@@ -118,9 +130,10 @@ export function CodeEditor({
       ...BASE_OPTIONS,
       scrollbar: { alwaysConsumeMouseWheel: !autoHeight },
       ...(allowPaste ? {} : NO_PASTE_OPTIONS),
+      ...(suggestions ? {} : NO_SUGGEST_OPTIONS),
       ariaLabel,
     }),
-    [autoHeight, ariaLabel, allowPaste],
+    [autoHeight, ariaLabel, allowPaste, suggestions],
   );
 
   // Bloqueo de pegar: el evento se cancela en fase de captura, antes de que llegue a Monaco.
@@ -141,7 +154,25 @@ export function CodeEditor({
     };
   }, [allowPaste]);
 
+  // El proveedor de pandas solo responde en los editores con sugerencias activas.
+  const modelUri = useRef<string | null>(null);
+  useEffect(() => {
+    const uri = modelUri.current;
+    if (!uri) return;
+    if (suggestions) enabledModels.add(uri);
+    else enabledModels.delete(uri);
+  }, [suggestions]);
+  useEffect(
+    () => () => {
+      if (modelUri.current) enabledModels.delete(modelUri.current);
+    },
+    [],
+  );
+
   const handleMount: OnMount = (editor, monaco) => {
+    const uri = editor.getModel()?.uri.toString() ?? null;
+    modelUri.current = uri;
+    if (uri && suggestions) enabledModels.add(uri);
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => runRef.current?.());
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () =>
       testRef.current?.(),

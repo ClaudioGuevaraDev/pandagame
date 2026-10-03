@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { LESSONS } from "../src/content/tutorial/index.ts";
-import { challengeHref, getChallengeById, getEditorCode, readProgress, waitForEditor } from "./helpers";
+import { challengeHref, firstIds, getChallengeById, getEditorCode, readProgress, seedProgress, waitForEditor } from "./helpers";
 
 const lessonNav = (page: import("@playwright/test").Page) => page.getByRole("navigation", { name: "Módulos del tutorial" });
 
@@ -8,8 +8,11 @@ test.describe("Tutorial @mobile", () => {
   test("el índice lista las 10 lecciones con la introducción primero", async ({ page }) => {
     await page.goto("/tutorial");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Tutorial");
+    await expect(page.locator("main ol > li")).toHaveCount(LESSONS.length);
+    // Al empezar solo están abiertas la introducción y Fundamentos; el resto llega con la historia.
     const items = page.locator("main ol li a");
-    await expect(items).toHaveCount(LESSONS.length);
+    await expect(items).toHaveCount(2);
+    await expect(page.locator("main ol > li", { hasText: "(bloqueada" })).toHaveCount(LESSONS.length - 2);
     await expect(items.first()).toContainText("〇");
     await expect(items.first()).toContainText("Cómo funcionan los retos");
     await page.getByRole("link", { name: /Empezar por el principio/ }).click();
@@ -68,6 +71,7 @@ test.describe("Ejemplos ejecutables", () => {
 });
 
 test("la lección se marca como leída al llegar al final", async ({ page }) => {
+  await seedProgress(page, { completed: firstIds(2) });
   await page.goto("/tutorial/seleccion");
   await expect(lessonNav(page).locator(".hanko")).toHaveCount(0);
   await page.getByRole("navigation", { name: "Lección anterior y siguiente" }).scrollIntoViewIfNeeded();
@@ -91,6 +95,11 @@ test("la lección 〇 explica todos los controles y no menciona Ver solución", 
     "Pestañas Salida y Tests",
     "Estado de Python",
     "Mini-mapa",
+    "Ver datos",
+    "Misión",
+    "Continuar la historia",
+    "Catalejo",
+    "Diario de Bao",
     "Borrar todo el progreso",
   ]) {
     await expect(guide.locator("dt .sr-only", { hasText: new RegExp(`^${name}$`) })).toHaveCount(1);

@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { ALL_CHALLENGES } from "@/content/challenges";
 import { LESSONS } from "@/content/tutorial";
 import { useProgress } from "@/lib/progress/store";
+import { SCENES } from "@/content/story/scenes";
 import { Dialog } from "./Dialog";
 
 const CONFIRM_WORD = "BORRAR";
@@ -14,6 +15,7 @@ export function ResetProgressDialog({ onClose }: { onClose: () => void }) {
   const done = useProgress((s) => Object.keys(s.completed).length);
   const saved = useProgress((s) => Object.keys(s.code).length);
   const read = useProgress((s) => Object.keys(s.tutorialRead).length);
+  const seen = useProgress((s) => Object.keys(s.scenesSeen).length);
   const resetAll = useProgress((s) => s.resetAll);
 
   const confirmed = typed.trim().toUpperCase() === CONFIRM_WORD;
@@ -55,7 +57,13 @@ export function ResetProgressDialog({ onClose }: { onClose: () => void }) {
           </span>
         </li>
         <li className="flex justify-between">
-          <span>Intentos y pistas</span>
+          <span>Escenas vistas</span>
+          <span className="font-bold tabular-nums">
+            {seen}/{SCENES.length}
+          </span>
+        </li>
+        <li className="flex justify-between">
+          <span>Intentos, pistas y recompensas</span>
           <span className="font-bold">todos</span>
         </li>
       </ul>

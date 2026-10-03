@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Lock, Play } from "lucide-react";
+import { BookOpenText, Lock, Play } from "lucide-react";
 import { LEVELS, challengeHref } from "@/content/challenges";
+import { sceneAfter, sceneHref } from "@/content/story/scenes";
+import type { Scene } from "@/content/story/types";
 import type { Challenge, Level, LevelId } from "@/content/types";
 import { ChallengeIcon } from "@/components/icons/ChallengeIcon";
 import { Hanko, LevelLogo, PandaLogo } from "@/components/icons/Logos";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
 import { challengeNumber, currentChallenge, firstOpenIndex } from "@/lib/progress/unlock";
+import { nextStop } from "@/lib/story/unlocks";
 import { LEVEL_THEME, PALETTE } from "@/lib/theme";
 
 const ROW = 136; // alto de cada fila del camino (px)
@@ -30,7 +33,10 @@ const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: r
 export function ProgressMap() {
   const hydrated = useHasHydrated();
   const stored = useProgress((s) => s.completed);
+  const storedSeen = useProgress((s) => s.scenesSeen);
   const completed = hydrated ? stored : EMPTY;
+  const scenesSeen = hydrated ? storedSeen : EMPTY;
+  const stop = hydrated ? nextStop(completed, scenesSeen) : undefined;
   // Se calcula una vez por render; cada nodo solo compara su posición.
   const firstOpen = hydrated ? firstOpenIndex(completed) : -1;
   const current = hydrated ? currentChallenge(completed) : undefined;
@@ -127,6 +133,7 @@ export function ProgressMap() {
               key={l.id}
               level={l}
               states={states[l.id]}
+              scenesSeen={scenesSeen}
               currentRef={currentRef}
               sectionRef={(el) => {
                 sectionRefs.current[l.id] = el;
@@ -143,13 +150,22 @@ export function ProgressMap() {
         </div>
       </div>
 
-      {current && (
+      {stop && (
         <Link
-          href={challengeHref(current)}
+          href={stop.type === "scene" ? sceneHref(stop.scene) : challengeHref(stop.challenge)}
           className="btn btn-seal fixed bottom-6 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap px-6 py-3 text-base"
         >
-          <Play className="h-4 w-4 fill-current" />
-          Continuar · Reto {challengeNumber(current.id)}
+          {stop.type === "scene" ? (
+            <>
+              <BookOpenText className="h-4 w-4" />
+              Continuar · {stop.scene.after ? "Historia" : "Prólogo"}
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4 fill-current" />
+              Continuar · Reto {challengeNumber(stop.challenge.id)}
+            </>
+          )}
         </Link>
       )}
     </div>
@@ -194,11 +210,13 @@ function LevelCard({ level, done, locked }: { level: Level; done: number; locked
 function LevelSection({
   level,
   states,
+  scenesSeen,
   currentRef,
   sectionRef,
 }: {
   level: Level;
   states: NodeState[];
+  scenesSeen: Record<string, boolean>;
   currentRef: React.RefObject<HTMLLIElement | null>;
   sectionRef: (el: HTMLElement | null) => void;
 }) {
@@ -223,7 +241,7 @@ function LevelSection({
         <span className="h-px flex-1 bg-rule" aria-hidden="true" />
       </div>
 
-      {/* mt-14: deja sitio al globo "¡Estás aquí!" del primer reto */}
+      {/* mt-14: deja sitio a la viñeta del prólogo sobre el primer reto */}
       <div className="relative mx-auto mt-14" style={{ width: WIDTH, height: points.length * ROW }}>
         <svg className="absolute inset-0 overflow-visible" width={WIDTH} height={points.length * ROW} aria-hidden="true">
           {points.slice(1).map((p, i) => {
@@ -237,7 +255,36 @@ function LevelSection({
           })}
         </svg>
 
-        <ol className="absolute inset-0">
+        {/* Escenas de la historia: entre reto y reto (y el prólogo antes del primero) */}
+        <ul className="pointer-events-none absolute inset-0" aria-label={`Escenas de ${level.name}`}>
+          {level.id === "facil" && (
+            <SceneNode
+              scene={sceneAfter(null)}
+              open
+              seen={!!scenesSeen.prologo}
+              x={points[0].x - 74}
+              y={points[0].y - 34}
+            />
+          )}
+          {level.challenges.map((c, i) => {
+            const a = points[i];
+            const b = points[i + 1] ?? { x: a.x, y: a.y + ROW * 0.62 };
+            const scene = sceneAfter(c.id);
+            return (
+              <SceneNode
+                key={c.id}
+                scene={scene}
+                open={states[i] === "done"}
+                seen={!!(scene && scenesSeen[scene.id])}
+                x={(a.x + b.x) / 2}
+                y={(a.y + b.y) / 2 + 8}
+              />
+            );
+          })}
+        </ul>
+
+        {/* Las capas no capturan clics: solo los nodos (así ninguna tapa a la otra) */}
+        <ol className="pointer-events-none absolute inset-0">
           {level.challenges.map((c, i) => (
             <MapNode
               key={c.id}
@@ -253,6 +300,42 @@ function LevelSection({
         </ol>
       </div>
     </section>
+  );
+}
+
+/** Mini nodo de escena: una viñeta para volver a ver la historia. */
+function SceneNode({ scene, open, seen, x, y }: { scene?: Scene; open: boolean; seen: boolean; x: number; y: number }) {
+  if (!scene) return null;
+  const label = `${scene.after ? "Escena" : "Prólogo"}: ${scene.title}`;
+  return (
+    <li className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 list-none" style={{ left: x, top: y }}>
+      {open ? (
+        <Link
+          href={sceneHref(scene)}
+          title={label}
+          className={`relative grid h-8 w-8 place-items-center rounded-md border-2 border-ink shadow-hand-sm transition-transform motion-safe:hover:-rotate-6 ${
+            seen ? "bg-paper-3 text-ink" : "bg-[#f6d77a] text-ink"
+          }`}
+        >
+          <ComicIcon />
+          {!seen && <span className="absolute -right-1.5 -top-1.5 h-3 w-3 rounded-full border-2 border-paper bg-seal" />}
+          <span className="sr-only">
+            {label} ({seen ? "vista" : "nueva"})
+          </span>
+        </Link>
+      ) : (
+        <span className="block h-3 w-3 rotate-45 border-2 border-ink-3/50 bg-paper-2" title="Escena bloqueada" aria-hidden="true" />
+      )}
+    </li>
+  );
+}
+
+/** Icono de viñetas (cuatro paneles inclinados). */
+function ComicIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-4.5 w-4.5" aria-hidden="true">
+      <path d="M2 2.5h7.5l-1 6.5H2Z M11 2.5h7v6.5h-8Z M2 11h8v6.5H2Z M11.5 11H18v6.5h-7.5Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -314,16 +397,23 @@ function MapNode({
   return (
     <li
       ref={nodeRef}
-      className="group absolute -translate-x-1/2 -translate-y-1/2 list-none"
+      className="group pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 list-none"
       style={{ left: x, top: y }}
     >
       {state === "current" && (
+        // Al costado (hacia el centro del camino): arriba y abajo quedan las escenas.
         <div
-          className="absolute -top-[3.4rem] left-1/2 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-[10px_14px_10px_12px] border-2 border-ink bg-paper-3 px-2.5 py-1 text-xs font-black text-ink shadow-hand-sm"
+          className={`absolute top-1/2 flex -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-[10px_14px_10px_12px] border-2 border-ink bg-paper-3 px-2.5 py-1 text-xs font-black text-ink shadow-hand-sm ${
+            side === "left" ? "right-full mr-4" : "left-full ml-4"
+          }`}
           aria-hidden="true"
         >
           <PandaLogo className="h-5 w-5" /> ¡Estás aquí!
-          <span className="absolute -bottom-[7px] left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-ink bg-paper-3" />
+          <span
+            className={`absolute top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 bg-paper-3 ${
+              side === "left" ? "-right-[7px] border-r-2 border-t-2 border-ink" : "-left-[7px] border-b-2 border-l-2 border-ink"
+            }`}
+          />
         </div>
       )}
 
