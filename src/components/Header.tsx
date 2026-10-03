@@ -36,17 +36,25 @@ export function Header() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold transition-colors ${
+              className={`flex items-center px-3 py-1.5 text-sm font-bold transition-colors ${
                 active ? "text-ink" : "text-ink-3 hover:text-ink"
               }`}
             >
-              <Icon className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only">{label}</span>
-              {active && (
-                <svg className="absolute inset-x-2 -bottom-0.5 h-2" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true">
-                  <path d="M2 5C25 2 60 7 98 3" className="stroke-seal" strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#brush-soft)" />
-                </svg>
-              )}
+              {/* El trazo se ancla al contenido (ícono + palabra), no al padding del enlace. */}
+              <span className="relative inline-flex items-center gap-1.5">
+                <Icon className="h-4 w-4" />
+                <span className="sr-only sm:not-sr-only">{label}</span>
+                {active && (
+                  <svg
+                    className="absolute inset-x-0 -bottom-1.5 h-1.5 w-full"
+                    viewBox="0 0 100 8"
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 5C28 2 60 7 94 3" className="stroke-seal" strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#brush-soft)" />
+                  </svg>
+                )}
+              </span>
             </Link>
           );
         })}
