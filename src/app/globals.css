@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-nunito);
+  --font-mono: var(--font-jetbrains);
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background: #0b0d12;
+  color: #e4e4e7;
+}
+
+/* Tablas de DataFrames renderizadas con to_html() */
+.df-output table.df {
+  border-collapse: collapse;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.df-output table.df th,
+.df-output table.df td {
+  padding: 0.3rem 0.7rem;
+  text-align: right;
+  border-bottom: 1px solid #27272a;
+}
+.df-output table.df thead th {
+  color: #a1a1aa;
+  font-weight: 700;
+  border-bottom: 1px solid #52525b;
+}
+.df-output table.df tbody th {
+  color: #a1a1aa;
+  font-weight: 600;
+}
+.df-output table.df tbody tr:hover {
+  background: #18181b;
+}
+
+/* Markdown (enunciados y tutorial) */
+.prose-panda {
+  line-height: 1.7;
+  color: #d4d4d8;
+}
+.prose-panda > * + * {
+  margin-top: 0.9em;
+}
+.prose-panda h1 { font-size: 1.6rem; font-weight: 800; color: #fafafa; }
+.prose-panda h2 { font-size: 1.3rem; font-weight: 800; color: #fafafa; margin-top: 1.6em; }
+.prose-panda h3 { font-size: 1.1rem; font-weight: 700; color: #fafafa; margin-top: 1.3em; }
+.prose-panda strong { color: #fafafa; }
+.prose-panda a { color: #34d399; text-decoration: underline; }
+.prose-panda ul { list-style: disc; padding-left: 1.4em; }
+.prose-panda ol { list-style: decimal; padding-left: 1.4em; }
+.prose-panda li + li { margin-top: 0.25em; }
+.prose-panda :not(pre) > code {
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 0.85em;
+  background: #27272a;
+  color: #fde68a;
+  padding: 0.1em 0.35em;
+  border-radius: 0.35em;
+}
+.prose-panda pre {
+  background: #111318;
+  border: 1px solid #27272a;
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+.prose-panda pre code { font-family: var(--font-jetbrains), monospace; }
+.prose-panda blockquote {
+  border-left: 3px solid #52525b;
+  padding-left: 1em;
+  color: #a1a1aa;
+}
+.prose-panda table { border-collapse: collapse; font-size: 0.9rem; display: block; overflow-x: auto; }
+.prose-panda th, .prose-panda td { border: 1px solid #3f3f46; padding: 0.35rem 0.7rem; }
+.prose-panda th { background: #18181b; color: #fafafa; }
+
+/* highlight.js (tema oscuro mínimo) */
+.hljs-keyword, .hljs-built_in { color: #c084fc; }
+.hljs-string { color: #86efac; }
+.hljs-number, .hljs-literal { color: #fdba74; }
+.hljs-comment { color: #71717a; font-style: italic; }
+.hljs-title, .hljs-title.function_ { color: #7dd3fc; }
+.hljs-params { color: #e4e4e7; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: float 3s ease-in-out infinite; }
+
+.scrollbar-thin { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
