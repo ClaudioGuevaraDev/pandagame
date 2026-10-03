@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Map } from "lucide-react";
+import { useState } from "react";
+import { BookOpen, Map, Trash2 } from "lucide-react";
 import { ALL_CHALLENGES } from "@/content/challenges";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
 import { PandaLogo } from "./icons/Logos";
+import { ResetProgressDialog } from "./ResetProgressDialog";
 
 const NAV = [
   { href: "/jugar", label: "Mapa", icon: Map },
@@ -16,6 +18,7 @@ export function Header() {
   const pathname = usePathname();
   const hydrated = useHasHydrated();
   const done = useProgress((s) => Object.keys(s.completed).length);
+  const [resetOpen, setResetOpen] = useState(false);
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-zinc-800/80 bg-[#0b0d12]/90 px-4">
@@ -45,7 +48,16 @@ export function Header() {
         >
           🎋 {hydrated ? done : "–"}/{ALL_CHALLENGES.length}
         </span>
+        <button
+          onClick={() => setResetOpen(true)}
+          className="ml-1 rounded-xl p-2 text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400"
+          title="Borrar todo el progreso"
+          aria-label="Borrar todo el progreso"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </nav>
+      {resetOpen && <ResetProgressDialog onClose={() => setResetOpen(false)} />}
     </header>
   );
 }

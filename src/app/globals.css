@@ -9,6 +9,17 @@
   color-scheme: dark;
 }
 
+/* Tailwind v4 deja los botones con cursor por defecto: lo restauramos para todos. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
 body {
   background: #0b0d12;
   color: #e4e4e7;

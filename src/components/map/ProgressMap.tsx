@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { Check, Lock, Play, RotateCcw } from "lucide-react";
+import { Check, Lock, Play } from "lucide-react";
 import { ALL_CHALLENGES, LEVELS, challengeHref } from "@/content/challenges";
 import type { Challenge, Level } from "@/content/types";
 import { ChallengeIcon } from "@/components/icons/ChallengeIcon";
@@ -21,7 +21,6 @@ type NodeState = "done" | "current" | "locked";
 export function ProgressMap() {
   const hydrated = useHasHydrated();
   const completed = useProgress((s) => s.completed);
-  const resetAll = useProgress((s) => s.resetAll);
   const current = hydrated ? currentChallenge(completed) : undefined;
   const currentRef = useRef<HTMLDivElement>(null);
 
@@ -51,17 +50,6 @@ export function ProgressMap() {
             hydrated={hydrated}
           />
         ))}
-
-        {hydrated && (
-          <button
-            onClick={() => {
-              if (confirm("¿Seguro que quieres borrar todo tu progreso y tu código guardado?")) resetAll();
-            }}
-            className="mt-6 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-zinc-500 hover:bg-zinc-900 hover:text-red-400"
-          >
-            <RotateCcw className="h-3.5 w-3.5" /> Reiniciar progreso
-          </button>
-        )}
       </div>
 
       {current && (

@@ -46,7 +46,11 @@ export const useProgress = create<ProgressState>()(
         }),
       markLessonRead: (slug) =>
         set((s) => (s.tutorialRead[slug] ? s : { tutorialRead: { ...s.tutorialRead, [slug]: true } })),
-      resetAll: () => set(initial),
+      resetAll: () => {
+        set(initial);
+        // Elimina la clave de localStorage (no solo la vacía).
+        useProgress.persist.clearStorage();
+      },
     }),
     {
       name: "pandagame-progress",
