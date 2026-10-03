@@ -17,9 +17,10 @@ export function GoogleIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-/** Diálogo para guardar el avance con Google. Se abre con openLogin() desde cualquier pantalla. */
+/** Diálogo de registro con Google. Se abre con openLogin() desde cualquier pantalla. */
 export function LoginDialog() {
   const open = useAuth((s) => s.loginOpen);
+  const atChallenge = useAuth((s) => s.loginReason === "challenge");
   const [going, setGoing] = useState(false);
   if (!open) return null;
 
@@ -40,11 +41,14 @@ export function LoginDialog() {
           <Cloud className="h-5 w-5" />
         </span>
       </div>
-      <h2 id="login-title" className="font-display mt-4 text-2xl font-extrabold text-ink">
-        Guarda tu avance
+      {atChallenge && <p className="kicker mt-4 text-seal-ink">Antes de empezar</p>}
+      <h2 id="login-title" className={`font-display text-2xl font-extrabold text-ink ${atChallenge ? "mt-1" : "mt-4"}`}>
+        Regístrate con Google
       </h2>
       <p id="login-desc" className="mt-2 text-ink-2">
-        Entra con Google y Bao recordará tus retos, escenas y recompensas en cualquier dispositivo.
+        {atChallenge
+          ? "Regístrate para que tu progreso en este reto quede guardado."
+          : "Crea tu cuenta en un clic: Bao recordará tus retos, escenas y recompensas en cualquier dispositivo."}
       </p>
       <ul className="mt-4 space-y-1 text-left text-sm text-ink-2">
         <li>✓ No pierdes nada si borras el navegador</li>
@@ -55,8 +59,9 @@ export function LoginDialog() {
         <button onClick={go} disabled={going} className="btn btn-paper gap-3 px-5 py-3">
           <GoogleIcon /> {going ? "Abriendo Google…" : "Continuar con Google"}
         </button>
+        <p className="text-xs text-ink-3">¿Ya tienes cuenta? El mismo botón inicia sesión.</p>
         <button onClick={closeLogin} className="mt-1 text-sm font-bold text-ink-3 hover:text-ink">
-          Ahora no
+          {atChallenge ? "Jugar sin cuenta" : "Ahora no"}
         </button>
       </div>
       <p className="mt-4 text-xs text-ink-3">

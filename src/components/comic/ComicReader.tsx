@@ -362,13 +362,13 @@ function SceneEnd({ rewards, next, final }: { rewards: Unlock[]; next?: (typeof 
   );
 }
 
-/** Sin sesión, invita a guardar las recompensas con Google. */
+/** Sin sesión, invita a registrarse para guardar las recompensas. */
 function SaveRewardsLink() {
   const signedOut = useAuth((s) => s.status === "out");
   if (!signedOut) return null;
   return (
-    <button onClick={openLogin} className="text-sm font-bold text-[#f6d77a] underline underline-offset-4 hover:text-paper-3" aria-haspopup="dialog">
-      Guarda las recompensas de Bao con tu cuenta de Google
+    <button onClick={() => openLogin()} className="text-sm font-bold text-[#f6d77a] underline underline-offset-4 hover:text-paper-3" aria-haspopup="dialog">
+      Regístrate con Google para guardar las recompensas de Bao
     </button>
   );
 }

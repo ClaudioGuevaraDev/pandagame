@@ -19,7 +19,7 @@ function readDismissed(): number {
 }
 
 /**
- * Invitación a guardar el avance en el mapa: aparece tras el primer reto. Si se
+ * Invitación a registrarse en el mapa: aparece tras el primer reto. Si se
  * descarta, vuelve a aparecer al completar un nivel nuevo.
  */
 export function MapLoginBanner({ completed }: { completed: Record<string, CompletedInfo> }) {
@@ -43,7 +43,7 @@ export function MapLoginBanner({ completed }: { completed: Record<string, Comple
     <div className="ink-in fixed inset-x-4 bottom-24 z-20 mx-auto flex max-w-md items-center gap-1 rounded-lg bg-paper-3 shadow-[3px_4px_0_0_var(--ink)]">
       <LoginNudge
         className="flex-1 border-solid"
-        text={`Llevas ${Object.keys(completed).length} ${Object.keys(completed).length === 1 ? "reto" : "retos"}. Guarda tu avance para no perderlo.`}
+        text={`Llevas ${Object.keys(completed).length} ${Object.keys(completed).length === 1 ? "reto" : "retos"}. Regístrate para no perder${Object.keys(completed).length === 1 ? "lo" : "los"}.`}
       />
       <button onClick={dismiss} className="btn-ghost absolute -right-2 -top-2 rounded-full border-2 border-ink bg-paper-3 p-0.5" aria-label="Descartar aviso">
         <X className="h-3.5 w-3.5" />

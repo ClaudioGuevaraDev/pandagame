@@ -7,7 +7,7 @@ import { GoogleIcon } from "./LoginDialog";
 
 const SYNC_LABEL = { idle: "Conectado", saving: "Guardando…", saved: "Progreso guardado", error: "Sin conexión con la nube" } as const;
 
-/** Botón de cuenta del header: «Guardar avance» sin sesión, avatar con menú con sesión. */
+/** Botón de cuenta del header: «Regístrate» sin sesión, avatar con menú con sesión. */
 export function AccountButton() {
   const status = useAuth((s) => s.status);
   const user = useAuth((s) => s.user);
@@ -34,13 +34,13 @@ export function AccountButton() {
   if (status === "out") {
     return (
       <button
-        onClick={openLogin}
+        onClick={() => openLogin()}
         className="btn btn-paper ml-1 gap-1.5 px-2.5 py-1 text-sm"
         aria-haspopup="dialog"
-        title="Guarda tu avance con Google"
+        title="Regístrate o inicia sesión con Google"
       >
         <GoogleIcon className="h-4 w-4" />
-        <span className="sr-only md:not-sr-only">Guardar avance</span>
+        <span className="sr-only md:not-sr-only">Regístrate</span>
       </button>
     );
   }

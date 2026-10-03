@@ -44,6 +44,7 @@ import {
 } from "@/lib/pyodide/runner";
 import { LoginNudge } from "@/components/account/LoginNudge";
 import { track } from "@/lib/cloud/answers";
+import { closeLogin, loginPromptDisabled, openLogin, useAuth } from "@/lib/cloud/auth";
 import { FEATURES } from "@/lib/features";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
 import { isChallengeUnlocked } from "@/lib/progress/unlock";
@@ -90,6 +91,14 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
   const isDone = hydrated && doneStored;
   const attempts = hydrated ? attemptsStored : 0;
   const { saveCode, resetCode, recordAttempt, revealHint } = useProgress.getState();
+
+  // Sin sesión, cada reto empieza invitando a registrarse.
+  const signedOut = useAuth((s) => s.status === "out");
+  useEffect(() => {
+    if (!hydrated || !signedOut || !unlockedStored || loginPromptDisabled()) return;
+    openLogin("challenge");
+    return closeLogin;
+  }, [challengeId, hydrated, signedOut, unlockedStored]);
 
   // Lo que la historia ya desbloqueó (antes de hidratar: nada).
   const owned = hydrated ? completed : {};
@@ -682,7 +691,7 @@ function SuccessModal({
           {rewards.length === 1 ? "Te espera una recompensa en la historia" : `Te esperan ${rewards.length} recompensas en la historia`}
         </p>
       )}
-      <LoginNudge className="mt-5" text="No pierdas tu avance: guárdalo con tu cuenta de Google." />
+      <LoginNudge className="mt-5" text="Regístrate con Google para no perder tu avance." />
       <div className="mt-7 flex flex-col gap-3">
         {storyHref && (
           <Link href={storyHref} className="btn btn-seal px-5 py-3">

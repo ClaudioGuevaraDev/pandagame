@@ -390,7 +390,7 @@ test.describe("Ventajas de la historia", () => {
     await page.waitForTimeout(800);
     await expect(page.locator(".suggest-widget.visible")).toHaveCount(0);
 
-    await page.evaluate(() => localStorage.clear());
+    await page.evaluate(() => localStorage.removeItem("pandagame-progress"));
     await seedProgress(page, { completed: firstIds(5) });
     await page.goto(challengeHref(challenge("facil-6")));
     await typeInEditor(page, "\nx = pd.");

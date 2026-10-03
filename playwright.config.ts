@@ -19,6 +19,11 @@ export default defineConfig({
     locale: "es-ES",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // Sin el aviso de registro al abrir cada reto (bloquearía la página); cuenta.spec.ts lo prueba aparte.
+    storageState: {
+      cookies: [],
+      origins: [{ origin: `http://localhost:${PORT}`, localStorage: [{ name: "pandagame-login-prompt", value: "off" }] }],
+    },
   },
   projects: [
     {

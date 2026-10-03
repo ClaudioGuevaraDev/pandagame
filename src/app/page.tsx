@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookOpen, Map as MapIcon } from "lucide-react";
 import { Enso, Hanko, PandaLogo } from "@/components/icons/Logos";
+import { AuthCta } from "@/components/home/AuthCta";
 import { ContinueButton } from "@/components/home/ContinueButton";
 import { HomeProgress } from "@/components/home/HomeProgress";
 
@@ -46,6 +47,10 @@ export default function Home() {
           <Link href="/tutorial" className="btn btn-paper px-4 py-3">
             <BookOpen className="h-4 w-4" /> Tutorial
           </Link>
+        </div>
+
+        <div className="ink-in mt-3 w-full" style={{ "--d": 6 }}>
+          <AuthCta />
         </div>
 
         <HomeProgress />

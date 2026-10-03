@@ -12,18 +12,23 @@ type AuthState = {
   status: AuthStatus;
   user: User | null;
   sync: SyncStatus;
-  /** El diálogo de "Guardar avance" está abierto (se puede abrir desde cualquier pantalla). */
+  /** El diálogo de registro está abierto (se puede abrir desde cualquier pantalla). */
   loginOpen: boolean;
+  /** Por qué se abrió: "challenge" al empezar un reto (cambia el texto del diálogo). */
+  loginReason: LoginReason;
 };
+
+export type LoginReason = "challenge" | null;
 
 export const useAuth = create<AuthState>()(() => ({
   status: CLOUD_ENABLED ? "loading" : "disabled",
   user: null,
   sync: "idle",
   loginOpen: false,
+  loginReason: null,
 }));
 
-export const openLogin = () => useAuth.setState({ loginOpen: true });
+export const openLogin = (reason: LoginReason = null) => useAuth.setState({ loginOpen: true, loginReason: reason });
 export const closeLogin = () => useAuth.setState({ loginOpen: false });
 
 let started = false;
@@ -65,4 +70,16 @@ export function displayName(user: User | null): string {
 export function avatarUrl(user: User | null): string | null {
   const meta = user?.user_metadata as { avatar_url?: string; picture?: string } | undefined;
   return meta?.avatar_url ?? meta?.picture ?? null;
+}
+
+/**
+ * El aviso de registro al empezar cada reto se puede desactivar con
+ * localStorage["pandagame-login-prompt"] = "off" (lo usan los tests e2e).
+ */
+export function loginPromptDisabled(): boolean {
+  try {
+    return localStorage.getItem("pandagame-login-prompt") === "off";
+  } catch {
+    return false;
+  }
 }
