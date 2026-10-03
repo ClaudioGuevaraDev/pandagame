@@ -9,13 +9,16 @@
   --paper: #f3ead6;
   --paper-2: #e9dcc0;
   --paper-3: #fbf6ea;
+  --paper-4: #fffdf6;
   --ink: #1d1b18;
   --ink-2: #4a443b;
-  --ink-3: #7a6f5c;
+  --ink-3: #655b4a;
   --rule: #d6c7a6;
   --seal: #c23a22;
   --seal-dark: #8e2412;
+  --seal-ink: #a93120;
   --bamboo: #4e7a36;
+  --bamboo-ink: #3f6a2a;
   --river: #2c5d7c;
   --summit: #6a4778;
   --hand-radius: 255px 18px 225px 18px / 18px 225px 18px 255px;
@@ -23,7 +26,6 @@
 
 @theme inline {
   --font-sans: var(--font-zen);
-  --font-display: var(--font-mincho);
   --font-mono: var(--font-jetbrains);
   --color-paper: var(--paper);
   --color-paper-2: var(--paper-2);
@@ -34,6 +36,11 @@
   --color-rule: var(--rule);
   --color-seal: var(--seal);
   --color-seal-dark: var(--seal-dark);
+  --color-seal-ink: var(--seal-ink);
+  --color-bamboo-ink: var(--bamboo-ink);
+  --shadow-hand: 3px 4px 0 0 var(--ink);
+  --shadow-hand-sm: 2px 3px 0 0 var(--ink);
+  --shadow-hand-seal: 2px 2px 0 0 var(--seal);
   --color-bamboo: var(--bamboo);
   --color-river: var(--river);
   --color-summit: var(--summit);
@@ -50,6 +57,15 @@
   }
   ::selection {
     background: color-mix(in srgb, var(--seal) 25%, transparent);
+  }
+  :focus-visible {
+    outline: 2.5px solid var(--seal);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  dialog::backdrop {
+    background: color-mix(in srgb, var(--ink) 40%, transparent);
+    backdrop-filter: blur(2px);
   }
 }
 
@@ -79,103 +95,113 @@ body::before {
     radial-gradient(ellipse 40% 30% at 70% 20%, rgba(220, 200, 160, 0.18), transparent 70%);
 }
 
-.font-display {
+@utility font-display {
   font-family: var(--font-mincho), serif;
   font-feature-settings: "palt";
 }
 
-/* ── Botones ───────────────────────────────────────────────── */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  border-radius: var(--hand-radius);
-  border: 2px solid var(--ink);
-  transition:
-    transform 120ms ease,
-    box-shadow 120ms ease,
-    background-color 150ms ease,
-    color 150ms ease;
-  box-shadow: 3px 4px 0 0 var(--ink);
-}
-.btn:not(:disabled):hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 5px 0 0 var(--ink);
-}
-.btn:not(:disabled):active {
-  transform: translate(3px, 4px);
-  box-shadow: 0 0 0 0 var(--ink);
-}
-.btn:disabled {
-  opacity: 0.45;
-}
-.btn-ink {
-  background: var(--ink);
-  color: var(--paper-3);
-}
-.btn-seal {
-  background: var(--seal);
-  color: #fff8ee;
-}
-.btn-seal:not(:disabled):hover {
-  background: #d24329;
-}
-.btn-paper {
-  background: var(--paper-3);
-  color: var(--ink);
-}
-.btn-paper:not(:disabled):hover {
-  background: #fffdf6;
-}
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-weight: 700;
-  color: var(--ink-2);
-  border-radius: 10px;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-.btn-ghost:hover {
-  background: color-mix(in srgb, var(--ink) 7%, transparent);
-  color: var(--ink);
+/* Etiqueta pequeña en mayúsculas espaciadas (niveles, módulos, retos) */
+@utility kicker {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
 }
 
-/* ── Tarjetas ──────────────────────────────────────────────── */
-.paper-card {
-  background: var(--paper-3);
-  border: 1.5px solid var(--ink);
-  border-radius: 6px 14px 8px 12px;
-  box-shadow: 5px 6px 0 0 color-mix(in srgb, var(--ink) 85%, transparent);
-}
+@layer components {
+  /* ── Botones ───────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border-radius: var(--hand-radius);
+    border: 2px solid var(--ink);
+    transition:
+      transform 120ms ease,
+      box-shadow 120ms ease,
+      background-color 150ms ease,
+      color 150ms ease;
+    box-shadow: 3px 4px 0 0 var(--ink);
+  }
+  .btn:not(:disabled):hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 5px 0 0 var(--ink);
+  }
+  .btn:not(:disabled):active {
+    transform: translate(3px, 4px);
+    box-shadow: 0 0 0 0 var(--ink);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+  }
+  .btn-ink {
+    background: var(--ink);
+    color: var(--paper-3);
+  }
+  .btn-seal {
+    background: var(--seal);
+    color: var(--paper-3);
+  }
+  .btn-seal:not(:disabled):hover {
+    background: var(--seal-ink);
+  }
+  .btn-paper {
+    background: var(--paper-3);
+    color: var(--ink);
+  }
+  .btn-paper:not(:disabled):hover {
+    background: var(--paper-4);
+  }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+    color: var(--ink-2);
+    border-radius: 10px;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+  .btn-ghost:hover {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    color: var(--ink);
+  }
 
-/* Sello hanko */
-.hanko {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--seal);
-  color: #fff4e6;
-  font-family: var(--font-mincho), serif;
-  font-weight: 800;
-  line-height: 1;
-  border-radius: 4px 6px 3px 7px;
-  box-shadow: inset 0 0 0 2px rgba(255, 240, 220, 0.35);
-}
+  /* ── Tarjetas ──────────────────────────────────────────────── */
+  .paper-card {
+    background: var(--paper-3);
+    border: 1.5px solid var(--ink);
+    border-radius: 6px 14px 8px 12px;
+    box-shadow: 5px 6px 0 0 color-mix(in srgb, var(--ink) 85%, transparent);
+  }
 
-/* Etiqueta tipo papel (tags, temas) */
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.15rem 0.6rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  border: 1.5px solid currentColor;
-  border-radius: 999px 12px 999px 12px;
+  /* Sello hanko */
+  .hanko {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--seal);
+    color: var(--paper-3);
+    font-family: var(--font-mincho), serif;
+    font-weight: 800;
+    line-height: 1;
+    border-radius: 4px 6px 3px 7px;
+    box-shadow: inset 0 0 0 2px rgba(255, 240, 220, 0.35);
+  }
+
+  /* Etiqueta tipo papel (tags, temas) */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1.5px solid currentColor;
+    border-radius: 999px 12px 999px 12px;
+  }
 }
 
 /* ── Salida de DataFrames ──────────────────────────────────── */
@@ -230,7 +256,7 @@ body::before {
 .prose-panda h3 { font-size: 1.15rem; font-weight: 700; margin-top: 1.4em; }
 .prose-panda strong { color: var(--ink); }
 .prose-panda a {
-  color: var(--seal);
+  color: var(--seal-ink);
   text-decoration: underline;
   text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
@@ -292,10 +318,21 @@ body::before {
   border-bottom: 2px solid var(--ink);
 }
 
+/* Vista previa resaltada de los ejemplos del tutorial (dentro de su tarjeta) */
+.snippet-preview pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--paper-3);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
 /* highlight.js en paleta de tinta */
 .hljs-keyword, .hljs-built_in { color: var(--summit); font-weight: 600; }
 .hljs-string { color: var(--bamboo); }
-.hljs-number, .hljs-literal { color: var(--seal); }
+.hljs-number, .hljs-literal { color: var(--seal-ink); }
 .hljs-comment { color: var(--ink-3); font-style: italic; }
 .hljs-title, .hljs-title.function_ { color: var(--river); }
 
@@ -345,10 +382,15 @@ body::before {
 .brush-fill { animation: brush-fill 1.1s cubic-bezier(0.5, 0, 0.2, 1) 500ms both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .ink-in, .enso-draw, .stamp-in, .animate-float, .seal-pulse, .brush-fill {
+  .ink-in, .enso-draw, .stamp-in, .animate-float, .seal-pulse, .brush-fill, .animate-spin, .animate-pulse {
     animation: none !important;
   }
+  .btn, .btn:hover, .btn:active {
+    transform: none !important;
+    transition: none !important;
+  }
   .enso-draw { stroke-dasharray: none; }
+  html:focus-within { scroll-behavior: auto; }
 }
 
 .scrollbar-thin { scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }

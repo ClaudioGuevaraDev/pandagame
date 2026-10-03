@@ -1,21 +1,10 @@
-"use client";
-
 import Link from "next/link";
-import { BookOpen, Map, Play } from "lucide-react";
-import { ALL_CHALLENGES, challengeHref } from "@/content/challenges";
+import { BookOpen, Map as MapIcon } from "lucide-react";
 import { Enso, Hanko, PandaLogo } from "@/components/icons/Logos";
-import { useHasHydrated, useProgress } from "@/lib/progress/store";
-import { currentChallenge } from "@/lib/progress/unlock";
+import { ContinueButton } from "@/components/home/ContinueButton";
+import { HomeProgress } from "@/components/home/HomeProgress";
 
 export default function Home() {
-  const hydrated = useHasHydrated();
-  const completed = useProgress((s) => s.completed);
-  const done = Object.keys(completed).length;
-  const total = ALL_CHALLENGES.length;
-  const current = currentChallenge(completed);
-  const started = hydrated && done > 0;
-  const pct = (done / Math.max(total, 1)) * 100;
-
   return (
     <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4">
       {/* Manchas de tinta difusas */}
@@ -31,68 +20,35 @@ export default function Home() {
       </p>
 
       <div className="relative flex w-full max-w-sm flex-col items-center text-center">
-        <div className="ink-in relative grid h-48 w-48 place-items-center" style={{ ["--d" as string]: 0 }}>
+        <div className="ink-in relative grid h-48 w-48 place-items-center" style={{ "--d": 0 }}>
           <Enso animated className="absolute inset-0 h-full w-full" />
           <PandaLogo className="animate-float relative h-28 w-28" />
           <Hanko char="熊" className="stamp-in absolute bottom-5 right-3 h-9 w-9 text-lg [animation-delay:1.3s]" />
         </div>
 
-        <h1
-          className="ink-in font-display mt-3 text-6xl font-extrabold tracking-tight text-ink"
-          style={{ ["--d" as string]: 2 }}
-        >
+        <h1 className="ink-in font-display mt-3 text-6xl font-extrabold tracking-tight text-ink" style={{ "--d": 2 }}>
           PandaGame
         </h1>
-        <div className="ink-in mt-2 flex items-center gap-3 text-ink-2" style={{ ["--d" as string]: 3 }}>
+        <div className="ink-in mt-2 flex items-center gap-3 text-ink-2" style={{ "--d": 3 }}>
           <span className="h-px w-8 bg-ink-3" />
           <p>Aprende pandas, reto a reto.</p>
           <span className="h-px w-8 bg-ink-3" />
         </div>
 
-        <div className="ink-in mt-9 w-full" style={{ ["--d" as string]: 4 }}>
-          <Link href={current ? challengeHref(current) : "/jugar"} className="btn btn-seal w-full px-6 py-4 text-xl">
-            <Play className="h-5 w-5 fill-current" />
-            {!started ? "Jugar" : current ? "Continuar" : "Ver mapa"}
-          </Link>
-          <p className="mt-2.5 h-5 truncate text-sm text-ink-3">
-            {started && current ? `Reto ${ALL_CHALLENGES.indexOf(current) + 1} · ${current.title}` : ""}
-            {hydrated && !current ? "Has completado todos los retos. Maestro Panda." : ""}
-          </p>
+        <div className="ink-in mt-9 w-full" style={{ "--d": 4 }}>
+          <ContinueButton />
         </div>
 
-        <div className="ink-in mt-3 grid w-full grid-cols-2 gap-3" style={{ ["--d" as string]: 5 }}>
+        <div className="ink-in mt-3 grid w-full grid-cols-2 gap-3" style={{ "--d": 5 }}>
           <Link href="/jugar" className="btn btn-paper px-4 py-3">
-            <Map className="h-4 w-4" /> Mapa
+            <MapIcon className="h-4 w-4" /> Mapa
           </Link>
           <Link href="/tutorial" className="btn btn-paper px-4 py-3">
             <BookOpen className="h-4 w-4" /> Tutorial
           </Link>
         </div>
 
-        <div
-          className={`mt-9 w-full transition-opacity duration-500 ${started ? "opacity-100" : "opacity-0"}`}
-          aria-hidden={!started}
-        >
-          <div className="mb-1.5 flex justify-between text-xs font-bold uppercase tracking-[0.2em] text-ink-3">
-            <span>Camino</span>
-            <span className="tabular-nums">
-              {done}/{total}
-            </span>
-          </div>
-          <svg viewBox="0 0 300 14" className="h-3.5 w-full" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M3 7C80 5 200 9 297 6" stroke="#d6c7a6" strokeWidth="8" strokeLinecap="round" fill="none" filter="url(#brush-soft)" />
-            <clipPath id="home-progress">
-              <rect x="0" y="0" width={(pct / 100) * 300} height="14" />
-            </clipPath>
-            {started && (
-              <g clipPath="url(#home-progress)">
-                <g className="brush-fill">
-                  <path d="M3 7C80 5 200 9 297 6" stroke="#1d1b18" strokeWidth="9" strokeLinecap="round" fill="none" filter="url(#brush-soft)" />
-                </g>
-              </g>
-            )}
-          </svg>
-        </div>
+        <HomeProgress />
       </div>
     </div>
   );

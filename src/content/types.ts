@@ -1,3 +1,5 @@
+import type { ChallengeIconName } from "./icons.ts";
+
 export type LevelId = "facil" | "medio" | "dificil";
 
 export type ChallengeTest = {
@@ -19,8 +21,8 @@ export type Challenge = {
   number: number;
   /** Nombre del reto, ej. "Primer brote". */
   title: string;
-  /** Nombre de un icono de lucide-react en PascalCase, ej. "Sprout". */
-  icon: string;
+  /** Icono de lucide-react registrado en icons.ts, ej. "Sprout". */
+  icon: ChallengeIconName;
   /** Tema corto, ej. "Crear DataFrames". */
   topic: string;
   /** Enunciado en markdown. */

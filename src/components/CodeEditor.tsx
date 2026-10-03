@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef } from "react";
-import type { BeforeMount, OnMount } from "@monaco-editor/react";
+import { useEffect, useMemo, useRef } from "react";
+import type { BeforeMount, EditorProps, OnMount } from "@monaco-editor/react";
+import { PALETTE } from "@/lib/theme";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -16,9 +17,71 @@ type Props = {
   onTest?: () => void;
   /** Ajusta la altura al contenido (para snippets del tutorial). */
   autoHeight?: boolean;
+  /** Etiqueta accesible del área de edición. */
+  ariaLabel?: string;
 };
 
-export function CodeEditor({ value, onChange, onRun, onTest, autoHeight }: Props) {
+const hex = (c: string) => c.replace("#", "");
+
+// Tema "washi": papel claro con tinta, añil, musgo y bermellón.
+const defineWashiTheme: BeforeMount = (monaco) => {
+  monaco.editor.defineTheme("washi", {
+    base: "vs",
+    inherit: true,
+    rules: [
+      { token: "", foreground: hex(PALETTE.ink) },
+      { token: "comment", foreground: hex(PALETTE.ink3), fontStyle: "italic" },
+      { token: "keyword", foreground: hex(PALETTE.summit), fontStyle: "bold" },
+      { token: "string", foreground: hex(PALETTE.bamboo) },
+      { token: "number", foreground: hex(PALETTE.sealInk) },
+      { token: "delimiter", foreground: hex(PALETTE.ink2) },
+      { token: "identifier", foreground: hex(PALETTE.ink) },
+      { token: "type", foreground: hex(PALETTE.river) },
+    ],
+    colors: {
+      "editor.background": PALETTE.paper3,
+      "editor.foreground": PALETTE.ink,
+      "editorLineNumber.foreground": PALETTE.ink3,
+      "editorLineNumber.activeForeground": PALETTE.ink,
+      "editor.lineHighlightBackground": PALETTE.paper,
+      "editor.lineHighlightBorder": "#00000000",
+      "editor.selectionBackground": `${PALETTE.seal}30`,
+      "editor.inactiveSelectionBackground": `${PALETTE.seal}1a`,
+      "editorCursor.foreground": PALETTE.seal,
+      "editorIndentGuide.background1": PALETTE.paper2,
+      "editorIndentGuide.activeBackground1": PALETTE.rule,
+      "editorBracketMatch.background": PALETTE.paper2,
+      "editorBracketMatch.border": PALETTE.ink3,
+      "editorWidget.background": PALETTE.paper3,
+      "editorWidget.border": PALETTE.ink,
+      "editorSuggestWidget.background": PALETTE.paper3,
+      "editorSuggestWidget.border": PALETTE.ink,
+      "editorSuggestWidget.selectedBackground": PALETTE.paper2,
+      "scrollbarSlider.background": `${PALETTE.rule}80`,
+      "scrollbarSlider.hoverBackground": PALETTE.ruleDark,
+    },
+  });
+};
+
+// Opciones fijas como constantes de módulo: si cambia la identidad del objeto,
+// Monaco llama a updateOptions en cada render (es decir, en cada tecla).
+const BASE_OPTIONS: EditorProps["options"] = {
+  fontSize: 14,
+  fontFamily: "var(--font-jetbrains), monospace",
+  minimap: { enabled: false },
+  scrollBeyondLastLine: false,
+  tabSize: 4,
+  padding: { top: 12, bottom: 12 },
+  automaticLayout: true,
+  lineNumbersMinChars: 3,
+  renderLineHighlight: "line",
+  cursorBlinking: "smooth",
+  fontLigatures: true,
+};
+const FULL_OPTIONS: EditorProps["options"] = { ...BASE_OPTIONS, scrollbar: { alwaysConsumeMouseWheel: true } };
+const AUTO_HEIGHT_OPTIONS: EditorProps["options"] = { ...BASE_OPTIONS, scrollbar: { alwaysConsumeMouseWheel: false } };
+
+export function CodeEditor({ value, onChange, onRun, onTest, autoHeight, ariaLabel = "Editor de código Python" }: Props) {
   // Refs para que los atajos siempre llamen a la versión más reciente de los callbacks.
   const runRef = useRef(onRun);
   const testRef = useRef(onTest);
@@ -28,46 +91,10 @@ export function CodeEditor({ value, onChange, onRun, onTest, autoHeight }: Props
   });
 
   const lines = value.split("\n").length;
-
-  // Tema "washi": papel claro con tinta, añil, musgo y bermellón.
-  const handleBeforeMount: BeforeMount = (monaco) => {
-    monaco.editor.defineTheme("washi", {
-      base: "vs",
-      inherit: true,
-      rules: [
-        { token: "", foreground: "1d1b18" },
-        { token: "comment", foreground: "8a7f6c", fontStyle: "italic" },
-        { token: "keyword", foreground: "6a4778", fontStyle: "bold" },
-        { token: "string", foreground: "4e7a36" },
-        { token: "number", foreground: "c23a22" },
-        { token: "delimiter", foreground: "4a443b" },
-        { token: "identifier", foreground: "1d1b18" },
-        { token: "type", foreground: "2c5d7c" },
-      ],
-      colors: {
-        "editor.background": "#fbf6ea",
-        "editor.foreground": "#1d1b18",
-        "editorLineNumber.foreground": "#b9a881",
-        "editorLineNumber.activeForeground": "#1d1b18",
-        "editor.lineHighlightBackground": "#f3ead6",
-        "editor.lineHighlightBorder": "#00000000",
-        "editor.selectionBackground": "#c23a2230",
-        "editor.inactiveSelectionBackground": "#c23a221a",
-        "editorCursor.foreground": "#c23a22",
-        "editorIndentGuide.background1": "#e9dcc0",
-        "editorIndentGuide.activeBackground1": "#d6c7a6",
-        "editorBracketMatch.background": "#e9dcc0",
-        "editorBracketMatch.border": "#8a7f6c",
-        "editorWidget.background": "#fbf6ea",
-        "editorWidget.border": "#1d1b18",
-        "editorSuggestWidget.background": "#fbf6ea",
-        "editorSuggestWidget.border": "#1d1b18",
-        "editorSuggestWidget.selectedBackground": "#e9dcc0",
-        "scrollbarSlider.background": "#d6c7a680",
-        "scrollbarSlider.hoverBackground": "#b9a881",
-      },
-    });
-  };
+  const options = useMemo(
+    () => ({ ...(autoHeight ? AUTO_HEIGHT_OPTIONS : FULL_OPTIONS), ariaLabel }),
+    [autoHeight, ariaLabel],
+  );
 
   const handleMount: OnMount = (editor, monaco) => {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => runRef.current?.());
@@ -83,22 +110,9 @@ export function CodeEditor({ value, onChange, onRun, onTest, autoHeight }: Props
         theme="washi"
         value={value}
         onChange={(v) => onChange(v ?? "")}
-        beforeMount={handleBeforeMount}
+        beforeMount={defineWashiTheme}
         onMount={handleMount}
-        options={{
-          fontSize: 14,
-          fontFamily: "var(--font-jetbrains), monospace",
-          minimap: { enabled: false },
-          scrollBeyondLastLine: false,
-          tabSize: 4,
-          padding: { top: 12, bottom: 12 },
-          automaticLayout: true,
-          lineNumbersMinChars: 3,
-          renderLineHighlight: "line",
-          cursorBlinking: "smooth",
-          fontLigatures: true,
-          scrollbar: { alwaysConsumeMouseWheel: !autoHeight },
-        }}
+        options={options}
       />
     </div>
   );

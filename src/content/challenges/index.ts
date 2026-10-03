@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import type { Challenge, Level, LevelId } from "../types.ts";
 import { facil } from "./facil.ts";
 import { medio } from "./medio.ts";
@@ -42,8 +43,8 @@ export function getChallengeById(id: string): Challenge | undefined {
   return ALL_CHALLENGES.find((c) => c.id === id);
 }
 
-export function challengeHref(c: Pick<Challenge, "level" | "number">): string {
-  return `/jugar/${c.level}/${c.number}`;
+export function challengeHref(c: Pick<Challenge, "level" | "number">): Route {
+  return `/jugar/${c.level}/${c.number}` as Route;
 }
 
 export function isLevelId(id: string): id is LevelId {

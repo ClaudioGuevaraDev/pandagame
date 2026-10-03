@@ -40,7 +40,7 @@ function setStatus(s: RunnerStatus) {
   listeners.forEach((l) => l());
 }
 
-function post<T>(msg: Record<string, unknown>, timeout?: number): Promise<T> {
+function post<T>(target: Worker, msg: Record<string, unknown>, timeout?: number): Promise<T> {
   const id = ++seq;
   return new Promise<T>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -65,13 +65,14 @@ function post<T>(msg: Record<string, unknown>, timeout?: number): Promise<T> {
         );
       }, timeout);
     }
-    worker!.postMessage({ ...msg, id });
+    target.postMessage({ ...msg, id });
   });
 }
 
-function spawn() {
-  worker = new Worker("/pyodide-worker.js", { type: "module" });
-  worker.onmessage = (e: MessageEvent) => {
+function spawn(): Promise<void> {
+  const w = new Worker("/pyodide-worker.js", { type: "module" });
+  worker = w;
+  w.onmessage = (e: MessageEvent) => {
     const { id, ok, data, error } = e.data;
     const p = pending.get(id);
     if (!p) return;
@@ -79,14 +80,14 @@ function spawn() {
     if (ok) p.resolve(data);
     else p.reject(new Error(error));
   };
-  worker.onerror = (e) => {
+  w.onerror = (e) => {
     e.preventDefault();
     const err = new Error("No se pudo cargar Python. Revisa tu conexión a internet y recarga la página.");
     for (const p of pending.values()) p.reject(err);
     pending.clear();
   };
   setStatus("loading");
-  readyPromise = post<void>({ type: "init", harness: HARNESS }).then(
+  const ready = post<void>(w, { type: "init", harness: HARNESS }).then(
     () => setStatus("ready"),
     (e: Error) => {
       loadError = e.message;
@@ -95,6 +96,8 @@ function spawn() {
       throw e;
     },
   );
+  readyPromise = ready;
+  return ready;
 }
 
 /** Termina el worker (p. ej. tras un timeout) y arranca uno nuevo. */
@@ -104,24 +107,23 @@ function restart() {
   pending.clear();
   worker = null;
   readyPromise = null;
-  spawn();
+  spawn().catch(() => {}); // el error queda en el estado "error"
 }
 
 /** Inicia la carga de Python (idempotente). */
 export function ensureRunner(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if (!worker || !readyPromise) {
-    worker?.terminate();
-    spawn();
-  }
-  return readyPromise!;
+  if (worker && readyPromise) return readyPromise;
+  worker?.terminate();
+  return spawn();
 }
 
 async function exec<T>(msg: Record<string, unknown>): Promise<T> {
   await ensureRunner();
+  if (!worker) throw new Error("Python no está disponible.");
   setStatus("running");
   try {
-    return await post<T>(msg, TIMEOUT_MS);
+    return await post<T>(worker, msg, TIMEOUT_MS);
   } finally {
     if (status === "running") setStatus("ready");
   }
@@ -135,14 +137,16 @@ export function runTests(code: string, setup: string, tests: ChallengeTest[]): P
   return exec<TestRun>({ type: "test", code, setup, tests });
 }
 
+function subscribeStatus(cb: () => void) {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+}
+const getStatus = () => status;
+const getServerStatus = (): RunnerStatus => "idle";
+
 export function useRunnerStatus(): { status: RunnerStatus; error: string | null } {
-  const s = useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
-    () => status,
-    () => "idle" as RunnerStatus,
-  );
+  const s = useSyncExternalStore(subscribeStatus, getStatus, getServerStatus);
   return { status: s, error: loadError };
 }

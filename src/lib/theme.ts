@@ -1,46 +1,46 @@
 import type { LevelId } from "@/content/types";
 
+/**
+ * Paleta en hex para donde no llegan las variables CSS (tema de Monaco,
+ * atributos SVG). Debe coincidir con los tokens de globals.css.
+ */
+export const PALETTE = {
+  paper: "#f3ead6",
+  paper2: "#e9dcc0",
+  paper3: "#fbf6ea",
+  ink: "#1d1b18",
+  ink2: "#4a443b",
+  ink3: "#655b4a",
+  rule: "#d6c7a6",
+  ruleDark: "#b9a881",
+  seal: "#c23a22",
+  sealInk: "#a93120",
+  bamboo: "#4e7a36",
+  river: "#2c5d7c",
+  summit: "#6a4778",
+} as const;
+
 /** Pigmento de cada nivel (clases literales para que Tailwind las detecte). */
-export const LEVEL_THEME: Record<
-  LevelId,
-  {
-    /** Numeral kanji decorativo. */
-    kanji: string;
-    text: string;
-    bg: string;
-    bgSoft: string;
-    border: string;
-    stroke: string;
-    hex: string;
-  }
-> = {
+export const LEVEL_THEME = {
   facil: {
     kanji: "一",
-    text: "text-bamboo",
+    // Texto pequeño con el tono oscuro para cumplir contraste AA.
+    text: "text-bamboo-ink",
     bg: "bg-bamboo",
-    bgSoft: "bg-bamboo/10",
-    border: "border-bamboo",
-    stroke: "stroke-bamboo",
-    hex: "#4e7a36",
+    hex: PALETTE.bamboo,
   },
   medio: {
     kanji: "二",
     text: "text-river",
     bg: "bg-river",
-    bgSoft: "bg-river/10",
-    border: "border-river",
-    stroke: "stroke-river",
-    hex: "#2c5d7c",
+    hex: PALETTE.river,
   },
   dificil: {
     kanji: "三",
     text: "text-summit",
     bg: "bg-summit",
-    bgSoft: "bg-summit/10",
-    border: "border-summit",
-    stroke: "stroke-summit",
-    hex: "#6a4778",
+    hex: PALETTE.summit,
   },
-};
+} as const satisfies Record<LevelId, { kanji: string; text: string; bg: string; hex: string }>;
 
 export const KANJI_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];

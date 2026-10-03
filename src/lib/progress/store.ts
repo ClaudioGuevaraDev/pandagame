@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -65,14 +65,14 @@ export const useProgress = create<ProgressState>()(
   ),
 );
 
-/** true cuando el estado ya se leyó de localStorage (evita desajustes de hidratación). */
+const subscribeHydration = (onChange: () => void) => useProgress.persist.onFinishHydration(onChange);
+const getHydrated = () => useProgress.persist.hasHydrated();
+const getServerHydrated = () => false;
+
+/**
+ * true cuando el estado ya se leyó de localStorage. En el servidor y en el primer
+ * render de hidratación es false (evita desajustes); al navegar en el cliente ya es true.
+ */
 export function useHasHydrated(): boolean {
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    const done = () => setHydrated(true);
-    const unsub = useProgress.persist.onFinishHydration(done);
-    if (useProgress.persist.hasHydrated()) done();
-    return unsub;
-  }, []);
-  return hydrated;
+  return useSyncExternalStore(subscribeHydration, getHydrated, getServerHydrated);
 }

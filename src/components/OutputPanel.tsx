@@ -2,7 +2,7 @@ import type { RunResult } from "@/lib/pyodide/runner";
 
 export function OutputPanel({ result, error }: { result: RunResult | null; error?: string | null }) {
   if (error) {
-    return <pre className="whitespace-pre-wrap font-mono text-sm text-seal">{error}</pre>;
+    return <pre className="whitespace-pre-wrap font-mono text-sm text-seal-ink">{error}</pre>;
   }
   if (!result) {
     return (

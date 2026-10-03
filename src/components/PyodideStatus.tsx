@@ -20,11 +20,11 @@ export function PyodideStatus() {
     error: "bg-seal",
   }[status];
   return (
-    <span className="flex items-center gap-1.5 text-xs font-bold text-ink-2" title={error ?? undefined}>
+    <span role="status" className="flex items-center gap-1.5 text-xs font-bold text-ink-2" title={error ?? undefined}>
       {status === "loading" || status === "running" ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
       ) : (
-        <span className={`h-2 w-2 rounded-[40%_60%_50%_45%] ${dot}`} />
+        <span className={`h-2 w-2 rounded-[40%_60%_50%_45%] ${dot}`} aria-hidden="true" />
       )}
       {label}
     </span>

@@ -1,9 +1,11 @@
 import type { LevelId } from "@/content/types";
+import { PALETTE } from "@/lib/theme";
 
 type Props = { className?: string };
 
-const INK = "#1d1b18";
-const PAPER = "#fbf6ea";
+const INK = PALETTE.ink;
+const PAPER = PALETTE.paper3;
+const SEAL = PALETTE.seal;
 
 /** Panda pintado a tinta sumi. */
 export function PandaLogo({ className }: Props) {
@@ -25,8 +27,8 @@ export function PandaLogo({ className }: Props) {
         <path d="M28.5 41.5c1.5-2 5.5-2 7 0-1 2.2-6 2.2-7 0Z" fill={INK} />
         <path d="M27 47c2.5 2.6 7.5 2.6 10 0" stroke={INK} strokeWidth="2" fill="none" strokeLinecap="round" />
       </g>
-      <circle cx="16.5" cy="41" r="3" fill="#c23a22" opacity="0.35" />
-      <circle cx="47.5" cy="41" r="3" fill="#c23a22" opacity="0.35" />
+      <circle cx="16.5" cy="41" r="3" fill={SEAL} opacity="0.35" />
+      <circle cx="47.5" cy="41" r="3" fill={SEAL} opacity="0.35" />
     </svg>
   );
 }
@@ -55,7 +57,7 @@ function RingClip() {
 
 /** Bosque de Bambú. */
 export function BambooLogo({ className }: Props) {
-  const c = "#4e7a36";
+  const c = PALETTE.bamboo;
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
       <RingClip />
@@ -75,7 +77,7 @@ export function BambooLogo({ className }: Props) {
 
 /** Río de Datos: olas seigaiha. */
 export function RiverLogo({ className }: Props) {
-  const c = "#2c5d7c";
+  const c = PALETTE.river;
   const wave = (cx: number, cy: number) => (
     <g key={`${cx}-${cy}`}>
       <circle cx={cx} cy={cy} r="11" fill={PAPER} stroke={c} strokeWidth="2" />
@@ -101,7 +103,7 @@ export function RiverLogo({ className }: Props) {
 
 /** Cumbre del Maestro Panda. */
 export function MountainLogo({ className }: Props) {
-  const c = "#6a4778";
+  const c = PALETTE.summit;
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
       <RingClip />
@@ -111,7 +113,7 @@ export function MountainLogo({ className }: Props) {
           <path d="M24 22l6 8.5-3.5-1.5-3 3-3.5-3.5-3 1.5Z" fill={PAPER} />
           <path d="M39 24l5 6.5-3-1-2.5 2-2.5-2.5Z" fill={PAPER} />
           <path d="M8 44h16M36 48h20M14 51h12" stroke={PAPER} strokeWidth="2.2" strokeLinecap="round" opacity="0.9" />
-          <circle cx="47" cy="15" r="5" fill="#c23a22" />
+          <circle cx="47" cy="15" r="5" fill={SEAL} />
         </g>
       </SealRing>
     </svg>
