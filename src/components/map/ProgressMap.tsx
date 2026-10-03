@@ -53,7 +53,8 @@ export function ProgressMap() {
   useEffect(() => {
     if (!hydrated) return;
     currentRef.current?.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  }, [hydrated]);
+    // También al cambiar el reto actual (p. ej. al traer el progreso de la nube tras iniciar sesión).
+  }, [hydrated, current?.id]);
 
   // Detecta qué nivel ocupa la franja superior del área con scroll.
   useEffect(() => {

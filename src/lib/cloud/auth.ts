@@ -46,10 +46,26 @@ export function startAuth() {
   });
 }
 
+const JUST_SIGNED_IN = "pandagame-just-signed-in";
+
+/** true una sola vez tras volver de Google (no al restaurar una sesión ya existente). */
+export function takeJustSignedIn(): boolean {
+  try {
+    const flag = sessionStorage.getItem(JUST_SIGNED_IN) === "1";
+    sessionStorage.removeItem(JUST_SIGNED_IN);
+    return flag;
+  } catch {
+    return false;
+  }
+}
+
 export async function signInWithGoogle() {
   const supabase = getSupabase();
   if (!supabase) return;
   const next = safeNext(window.location.pathname + window.location.search);
+  try {
+    sessionStorage.setItem(JUST_SIGNED_IN, "1");
+  } catch {}
   await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },

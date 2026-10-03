@@ -15,6 +15,7 @@ import { UNLOCK_ICONS } from "../src/content/story/icons.ts";
 import { BACKGROUNDS, CHARACTER_IDS, MOODS, POSES, PROPS } from "../src/content/story/types.ts";
 import { mergeProgress, type SyncedProgress } from "../src/lib/cloud/merge.ts";
 import { safeNext } from "../src/lib/cloud/safe-next.ts";
+import { postLoginTarget } from "../src/lib/cloud/post-login.ts";
 
 type TestOutput = {
   error: string | null;
@@ -204,6 +205,12 @@ for (const c of selected) {
   check(mergeProgress(local, null) === local, "sin datos en la nube queda el local");
   check(safeNext("/jugar?x=1") === "/jugar?x=1", "safeNext acepta rutas internas");
   for (const bad of ["//evil.com", "https://evil.com", "/\\evil.com", null]) check(safeNext(bad) === "/", `safeNext rechaza ${bad}`);
+  const done = (n: number) => Object.fromEntries(ALL_CHALLENGES.slice(0, n).map((c) => [c.id, true]));
+  const href = (i: number) => `/jugar/${ALL_CHALLENGES[i].level}/${ALL_CHALLENGES[i].number}`;
+  check(postLoginTarget(href(0), done(12)) === href(12), "tras el login, del reto 1 al reto actual");
+  check(postLoginTarget(href(12) + "/", done(12)) === null, "ya en el reto actual no se mueve");
+  check(postLoginTarget("/jugar", done(12)) === null, "fuera de un reto no se mueve");
+  check(postLoginTarget(href(3), done(ALL_CHALLENGES.length)) === null, "con todo completado no se mueve");
   console.log("· sincronización");
 }
 

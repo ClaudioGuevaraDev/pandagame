@@ -31,22 +31,24 @@ async function push(userId: string) {
 }
 
 /**
+ * Devuelve true si el progreso de la nube se fusionó con el local.
  * Al iniciar sesión: trae el progreso de la nube, lo fusiona con el local y sube
  * el resultado. Desde ahí, cada cambio del progreso se sube con un pequeño retraso.
  */
-export async function startSync(userId: string) {
+export async function startSync(userId: string): Promise<boolean> {
   const supabase = getSupabase();
-  if (!supabase || syncedUser === userId) return;
+  if (!supabase || syncedUser === userId) return false;
   syncedUser = null;
   useAuth.setState({ sync: "saving" });
   const { data, error } = await supabase.from("progress").select("state").eq("user_id", userId).maybeSingle();
   if (error) {
     useAuth.setState({ sync: "error" });
-    return;
+    return false;
   }
   useProgress.setState(mergeProgress(snapshot(), (data?.state as Partial<SyncedProgress> | undefined) ?? null));
   syncedUser = userId;
   await push(userId);
+  return true;
 }
 
 export function stopSync() {

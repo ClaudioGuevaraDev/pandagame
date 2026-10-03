@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
-import { startAuth, useAuth } from "./auth";
+import { startAuth, takeJustSignedIn, useAuth } from "./auth";
+import { postLoginTarget } from "./post-login";
 import { flushAnswers, scheduleFlush } from "./answers";
 import { flushPush, schedulePush, startSync, stopSync } from "./sync";
 
@@ -10,6 +13,7 @@ import { flushPush, schedulePush, startSync, stopSync } from "./sync";
 export function CloudSync() {
   const hydrated = useHasHydrated();
   const userId = useAuth((s) => s.user?.id ?? null);
+  const router = useRouter();
 
   useEffect(() => {
     startAuth();
@@ -32,9 +36,15 @@ export function CloudSync() {
       stopSync();
       return;
     }
-    void startSync(userId).then(() => scheduleFlush(0));
+    void startSync(userId).then((merged) => {
+      scheduleFlush(0);
+      // Recién vuelto de Google en un reto: al reto donde se quedó (con el progreso ya fusionado).
+      if (!takeJustSignedIn() || !merged) return;
+      const target = postLoginTarget(window.location.pathname, useProgress.getState().completed);
+      if (target) router.replace(target as Route);
+    });
     return useProgress.subscribe(schedulePush);
-  }, [hydrated, userId]);
+  }, [hydrated, userId, router]);
 
   return null;
 }
