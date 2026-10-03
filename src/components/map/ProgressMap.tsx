@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Lock, Play } from "lucide-react";
 import { LEVELS, challengeHref } from "@/content/challenges";
-import type { Challenge, Level } from "@/content/types";
+import type { Challenge, Level, LevelId } from "@/content/types";
 import { ChallengeIcon } from "@/components/icons/ChallengeIcon";
 import { Hanko, LevelLogo, PandaLogo } from "@/components/icons/Logos";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
@@ -25,6 +25,8 @@ const STATE_LABEL: Record<NodeState, string> = {
   locked: "bloqueado",
 };
 
+const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export function ProgressMap() {
   const hydrated = useHasHydrated();
   const stored = useProgress((s) => s.completed);
@@ -33,38 +35,112 @@ export function ProgressMap() {
   const firstOpen = hydrated ? firstOpenIndex(completed) : -1;
   const current = hydrated ? currentChallenge(completed) : undefined;
   const currentRef = useRef<HTMLLIElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef<Partial<Record<LevelId, HTMLElement | null>>>({});
+
+  // Nivel que muestra la cabecera fija: el que se está viendo al hacer scroll
+  // (o, al cargar, el del reto actual).
+  const [viewedLevel, setViewedLevel] = useState<LevelId | null>(null);
+  const activeLevel: LevelId = viewedLevel ?? current?.level ?? "facil";
 
   useEffect(() => {
     if (!hydrated) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    currentRef.current?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+    currentRef.current?.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
   }, [hydrated]);
+
+  // Detecta qué nivel ocupa la franja superior del área con scroll.
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length) setViewedLevel(visible[0].target.getAttribute("data-level") as LevelId);
+      },
+      { root, rootMargin: "0px 0px -75% 0px" },
+    );
+    for (const el of Object.values(sectionRefs.current)) if (el) observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const stateOf = (c: Challenge): NodeState => {
     const idx = challengeNumber(c.id) - 1;
     return completed[c.id] ? "done" : idx <= firstOpen ? "current" : "locked";
   };
+  const states = Object.fromEntries(LEVELS.map((l) => [l.id, l.challenges.map(stateOf)])) as Record<
+    LevelId,
+    NodeState[]
+  >;
+  const doneOf = (l: Level) => l.challenges.filter((c) => completed[c.id]).length;
+
+  const goToLevel = (id: LevelId) => {
+    setViewedLevel(id);
+    sectionRefs.current[id]?.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  };
+
+  const level = LEVELS.find((l) => l.id === activeLevel) ?? LEVELS[0];
 
   return (
-    <div className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
-      <div className="mx-auto flex max-w-xl flex-col items-center px-4 pb-32 pt-6">
-        <h1 className="sr-only">Mapa de retos</h1>
-        {LEVELS.map((level) => (
-          <LevelSection
-            key={level.id}
-            level={level}
-            states={level.challenges.map(stateOf)}
-            done={level.challenges.filter((c) => completed[c.id]).length}
-            currentRef={currentRef}
-          />
-        ))}
-        <p className="font-display mt-2 text-center text-ink-3">
-          <span className="text-3xl text-ink" aria-hidden="true">
-            頂
-          </span>
-          <br />
-          La cumbre te espera.
-        </p>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <h1 className="sr-only">Mapa de retos</h1>
+
+      {/* Cabecera fija del nivel: queda fuera del área con scroll, así los retos nunca pasan por debajo. */}
+      <div className="shrink-0 border-b border-rule bg-paper/80 px-4 pb-3 pt-3 sm:pt-4">
+        <div className="mx-auto max-w-xl">
+          <LevelCard key={level.id} level={level} done={doneOf(level)} locked={states[level.id][0] === "locked"} />
+          <div className="mt-3 flex items-center justify-center gap-2" role="group" aria-label="Ir a un nivel">
+            {LEVELS.map((l) => {
+              const theme = LEVEL_THEME[l.id];
+              const locked = states[l.id][0] === "locked";
+              const active = l.id === activeLevel;
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => goToLevel(l.id)}
+                  aria-label={`Ir al nivel ${l.difficulty}: ${l.name}${locked ? " (bloqueado)" : ""}`}
+                  aria-current={active ? "true" : undefined}
+                  className={`flex items-center gap-1.5 rounded-full border-2 px-3 py-0.5 text-xs font-bold transition-colors ${
+                    active ? "border-ink bg-ink text-paper-3" : "border-rule bg-paper-3/70 text-ink-2 hover:border-ink"
+                  }`}
+                >
+                  <span className={`font-display text-sm ${active ? "" : theme.text}`}>{theme.kanji}</span>
+                  {l.difficulty}
+                  {locked ? (
+                    <Lock className="h-3 w-3" />
+                  ) : (
+                    <span className="tabular-nums opacity-80">
+                      {doneOf(l)}/{l.challenges.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Solo esta zona hace scroll */}
+      <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+        <div className="mx-auto flex max-w-xl flex-col items-center px-4 pb-32">
+          {LEVELS.map((l) => (
+            <LevelSection
+              key={l.id}
+              level={l}
+              states={states[l.id]}
+              currentRef={currentRef}
+              sectionRef={(el) => {
+                sectionRefs.current[l.id] = el;
+              }}
+            />
+          ))}
+          <p className="font-display mt-2 text-center text-ink-3">
+            <span className="text-3xl text-ink" aria-hidden="true">
+              頂
+            </span>
+            <br />
+            La cumbre te espera.
+          </p>
+        </div>
       </div>
 
       {current && (
@@ -80,20 +156,53 @@ export function ProgressMap() {
   );
 }
 
+/** Tarjeta del nivel visible (logo, nombre, descripción y progreso). */
+function LevelCard({ level, done, locked }: { level: Level; done: number; locked: boolean }) {
+  const theme = LEVEL_THEME[level.id];
+  const total = level.challenges.length;
+  return (
+    <div className={`paper-card ink-in relative flex items-center gap-3 p-3 sm:gap-4 sm:p-4 ${locked ? "grayscale-[0.7]" : ""}`}>
+      <LevelLogo level={level.id} className="h-11 w-11 shrink-0 sm:h-16 sm:w-16" />
+      <div className="min-w-0 flex-1" aria-live="polite">
+        <p className={`kicker ${theme.text}`}>
+          Nivel {theme.kanji} · {level.difficulty}
+        </p>
+        <p className="font-display truncate text-xl font-extrabold leading-tight text-ink sm:text-2xl">{level.name}</p>
+        <p className="hidden truncate text-sm text-ink-3 sm:block">{level.description}</p>
+      </div>
+      <div className="shrink-0 text-right">
+        {locked ? (
+          <>
+            <Lock className="ml-auto h-5 w-5 text-ink-3" />
+            <span className="sr-only">Nivel bloqueado</span>
+          </>
+        ) : (
+          <span className="font-display text-2xl font-extrabold tabular-nums text-ink">
+            {done}
+            <span className="text-base text-ink-3">/{total}</span>
+            <span className="sr-only"> retos completados</span>
+          </span>
+        )}
+        <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-paper-2" aria-hidden="true">
+          <div className={`h-full ${theme.bg}`} style={{ width: `${(done / Math.max(total, 1)) * 100}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LevelSection({
   level,
   states,
-  done,
   currentRef,
+  sectionRef,
 }: {
   level: Level;
   states: NodeState[];
-  done: number;
   currentRef: React.RefObject<HTMLLIElement | null>;
+  sectionRef: (el: HTMLElement | null) => void;
 }) {
   const theme = LEVEL_THEME[level.id];
-  const total = level.challenges.length;
-  const levelLocked = states[0] === "locked";
   const headingId = `nivel-${level.id}`;
 
   const points = level.challenges.map((_, i) => ({
@@ -102,41 +211,20 @@ function LevelSection({
   }));
 
   return (
-    <section className="mb-12 w-full" aria-labelledby={headingId}>
-      {/* Cabecera tipo pergamino colgante (kakejiku) */}
-      <div className="sticky top-0 z-10 -mx-1 mb-8 pt-2">
-        <div className={`paper-card relative flex items-center gap-4 p-4 ${levelLocked ? "grayscale-[0.7]" : ""}`}>
-          <LevelLogo level={level.id} className="h-16 w-16 shrink-0" />
-          <div className="relative min-w-0 flex-1">
-            <p className={`kicker ${theme.text}`}>
-              Nivel {theme.kanji} · {level.difficulty}
-            </p>
-            <h2 id={headingId} className="font-display truncate text-2xl font-extrabold leading-tight text-ink">
-              {level.name}
-            </h2>
-            <p className="truncate text-sm text-ink-3">{level.description}</p>
-          </div>
-          <div className="relative shrink-0 text-right">
-            {levelLocked ? (
-              <>
-                <Lock className="ml-auto h-5 w-5 text-ink-3" />
-                <span className="sr-only">Nivel bloqueado</span>
-              </>
-            ) : (
-              <span className="font-display text-2xl font-extrabold tabular-nums text-ink">
-                {done}
-                <span className="text-base text-ink-3">/{total}</span>
-                <span className="sr-only"> retos completados</span>
-              </span>
-            )}
-            <div className="mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-paper-2" aria-hidden="true">
-              <div className={`h-full ${theme.bg}`} style={{ width: `${(done / Math.max(total, 1)) * 100}%` }} />
-            </div>
-          </div>
-        </div>
+    <section ref={sectionRef} data-level={level.id} className="w-full scroll-mt-2 pb-10 pt-8" aria-labelledby={headingId}>
+      {/* Separador ligero entre niveles */}
+      <div className="flex items-center gap-3">
+        <span className={`font-display text-2xl font-extrabold leading-none ${theme.text}`} aria-hidden="true">
+          {theme.kanji}
+        </span>
+        <h2 id={headingId} className={`kicker ${theme.text}`}>
+          {level.difficulty} · {level.name}
+        </h2>
+        <span className="h-px flex-1 bg-rule" aria-hidden="true" />
       </div>
 
-      <div className="relative mx-auto" style={{ width: WIDTH, height: points.length * ROW }}>
+      {/* mt-14: deja sitio al globo "¡Estás aquí!" del primer reto */}
+      <div className="relative mx-auto mt-14" style={{ width: WIDTH, height: points.length * ROW }}>
         <svg className="absolute inset-0 overflow-visible" width={WIDTH} height={points.length * ROW} aria-hidden="true">
           {points.slice(1).map((p, i) => {
             const a = points[i];
@@ -150,18 +238,18 @@ function LevelSection({
         </svg>
 
         <ol className="absolute inset-0">
-        {level.challenges.map((c, i) => (
-          <MapNode
-            key={c.id}
-            challenge={c}
-            index={challengeNumber(c.id)}
-            state={states[i]}
-            x={points[i].x}
-            y={points[i].y}
-            side={WAVE[i % WAVE.length] > 0 ? "left" : "right"}
-            nodeRef={states[i] === "current" ? currentRef : undefined}
-          />
-        ))}
+          {level.challenges.map((c, i) => (
+            <MapNode
+              key={c.id}
+              challenge={c}
+              index={challengeNumber(c.id)}
+              state={states[i]}
+              x={points[i].x}
+              y={points[i].y}
+              side={WAVE[i % WAVE.length] > 0 ? "left" : "right"}
+              nodeRef={states[i] === "current" ? currentRef : undefined}
+            />
+          ))}
         </ol>
       </div>
     </section>
@@ -246,7 +334,7 @@ function MapNode({
           href={challengeHref(challenge)}
           aria-describedby={tooltipId}
           aria-current={state === "current" ? "step" : undefined}
-          className="block scroll-mb-24 scroll-mt-40 rounded-full"
+          className="block scroll-mb-24 scroll-mt-20 rounded-full"
         >
           {body}
         </Link>
