@@ -44,3 +44,20 @@ export const LEVEL_THEME = {
 } as const satisfies Record<LevelId, { kanji: string; text: string; bg: string; hex: string }>;
 
 export const KANJI_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+
+/** Tema oscuro "piedra de tinta" del editor y de la vista previa del tutorial. */
+export const EDITOR_PALETTE = {
+  bg: "#1d1b18",
+  lineHighlight: "#2a2723",
+  fg: "#f3ead6",
+  comment: "#a89c85",
+  lineNumber: "#7d7262",
+  keyword: "#f2c14e",
+  string: "#a6d189",
+  number: "#ff8a6b",
+  type: "#8ec5e8",
+  delimiter: "#d6c7a6",
+  cursor: "#ff8a6b",
+  selection: "#c23a22",
+  border: "#3a362f",
+} as const;

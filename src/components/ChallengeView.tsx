@@ -28,12 +28,14 @@ import { ChallengeIcon } from "@/components/icons/ChallengeIcon";
 import { Enso, Hanko, LevelLogo } from "@/components/icons/Logos";
 import { MiniMap } from "@/components/map/MiniMap";
 import { ensureRunner, runCode, runTests, type RunResult, type TestRun } from "@/lib/pyodide/runner";
+import { FEATURES } from "@/lib/features";
 import { useHasHydrated, useProgress } from "@/lib/progress/store";
 import { isChallengeUnlocked, nextChallenge } from "@/lib/progress/unlock";
 import { LEVEL_THEME } from "@/lib/theme";
 
 const SOLUTION_AFTER_ATTEMPTS = 3;
 const SAVE_DELAY_MS = 500;
+const PASTE_NOTICE_MS = 2500;
 
 type MobileTab = "reto" | "codigo" | "resultado";
 type OutputTab = "salida" | "tests";
@@ -83,6 +85,15 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
   const [hintsShown, setHintsShown] = useState(0);
   const [celebrate, setCelebrate] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const [pasteNotice, setPasteNotice] = useState(false);
+  const pasteTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const onPasteBlocked = () => {
+    setPasteNotice(true);
+    setAnnouncement("Pegar está desactivado en los retos.");
+    clearTimeout(pasteTimer.current);
+    pasteTimer.current = setTimeout(() => setPasteNotice(false), PASTE_NOTICE_MS);
+  };
+  useEffect(() => () => clearTimeout(pasteTimer.current), []);
 
   // Bloqueo: no se puede entrar a un reto sin completar los anteriores.
   useEffect(() => {
@@ -189,7 +200,8 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
 
   const next = nextChallenge(challengeId);
   const passedCount = testRun?.results.filter((r) => r.passed).length ?? 0;
-  const canSeeSolution = isDone || attempts >= SOLUTION_AFTER_ATTEMPTS;
+  // La solución está oculta mientras FEATURES.showSolution sea false.
+  const canSeeSolution = FEATURES.showSolution && (isDone || attempts >= SOLUTION_AFTER_ATTEMPTS);
   const testState = (i: number) => {
     const r = testRun?.results[i];
     return !r ? "pending" : r.passed ? "passed" : "failed";
@@ -315,7 +327,7 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
                 </button>
               )}
             </div>
-            {!canSeeSolution && attempts > 0 && (
+            {FEATURES.showSolution && !canSeeSolution && attempts > 0 && (
               <p className="text-xs text-ink-3">
                 La solución se desbloquea tras {SOLUTION_AFTER_ATTEMPTS} intentos ({attempts}/
                 {SOLUTION_AFTER_ATTEMPTS}).
@@ -331,8 +343,23 @@ export function ChallengeView({ challenge, level, description, hints }: Props) {
             tabIndex={-1}
             className={`${mobileTab === "codigo" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex`}
           >
-            <div className="min-h-0 flex-1 bg-paper-3">
-              <CodeEditor value={code} onChange={onChange} onRun={run} onTest={test} />
+            <div className="relative min-h-0 flex-1 bg-editor">
+              <CodeEditor
+                value={code}
+                onChange={onChange}
+                onRun={run}
+                onTest={test}
+                allowPaste={false}
+                onPasteBlocked={onPasteBlocked}
+              />
+              {pasteNotice && (
+                <p
+                  className="ink-in pointer-events-none absolute left-1/2 top-3 z-10 -translate-x-1/2 whitespace-nowrap rounded-[8px_12px_8px_10px] border-2 border-seal bg-paper-3 px-3 py-1.5 text-sm font-bold text-ink shadow-hand-sm"
+                  aria-hidden="true"
+                >
+                  Pegar está desactivado en los retos: escribe tu propio código ✍️
+                </p>
+              )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-3 border-y-2 border-ink bg-paper-2/70 px-3 py-2.5">
               <button onClick={run} disabled={busy} className="btn btn-ink px-4 py-1.5 text-sm" aria-keyshortcuts="Control+Enter">

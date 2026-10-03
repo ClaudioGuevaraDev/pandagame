@@ -82,13 +82,13 @@ export function RunnableSnippet({
         </div>
       ) : (
         <pre
-          className="cursor-text overflow-x-auto bg-paper-3 py-3 font-mono text-sm leading-5 text-ink scrollbar-thin"
+          className="cursor-text overflow-x-auto bg-editor py-3 font-mono text-[15px] font-medium leading-[22px] text-editor-fg scrollbar-thin"
           onDoubleClick={() => setEditing(true)}
         >
           <code>
             {lines.map((line, i) => (
               <span key={i} className="flex">
-                <span className="w-10 shrink-0 select-none pr-4 text-right text-ink-3" aria-hidden="true">
+                <span className="w-10 shrink-0 select-none pr-4 text-right text-editor-fg/45" aria-hidden="true">
                   {i + 1}
                 </span>
                 <span className="whitespace-pre">{line || " "}</span>

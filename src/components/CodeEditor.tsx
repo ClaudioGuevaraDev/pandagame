@@ -3,11 +3,11 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef } from "react";
 import type { BeforeMount, EditorProps, OnMount } from "@monaco-editor/react";
-import { PALETTE } from "@/lib/theme";
+import { EDITOR_PALETTE as E } from "@/lib/theme";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
-  loading: () => <div className="h-full w-full animate-pulse bg-paper-3" />,
+  loading: () => <div className="h-full w-full animate-pulse bg-editor" />,
 });
 
 type Props = {
@@ -19,46 +19,50 @@ type Props = {
   autoHeight?: boolean;
   /** Etiqueta accesible del área de edición. */
   ariaLabel?: string;
+  /** false: no se puede pegar ni arrastrar texto al editor (copiar sí). */
+  allowPaste?: boolean;
+  /** Se llama cuando se bloquea un intento de pegar o soltar texto. */
+  onPasteBlocked?: () => void;
 };
 
 const hex = (c: string) => c.replace("#", "");
 
-// Tema "washi": papel claro con tinta, añil, musgo y bermellón.
-const defineWashiTheme: BeforeMount = (monaco) => {
-  monaco.editor.defineTheme("washi", {
-    base: "vs",
+// Tema oscuro "piedra de tinta": fondo de tinta, texto crema y colores vivos.
+const defineSumiTheme: BeforeMount = (monaco) => {
+  monaco.editor.defineTheme("sumi", {
+    base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "", foreground: hex(PALETTE.ink) },
-      { token: "comment", foreground: hex(PALETTE.ink3), fontStyle: "italic" },
-      { token: "keyword", foreground: hex(PALETTE.summit), fontStyle: "bold" },
-      { token: "string", foreground: hex(PALETTE.bamboo) },
-      { token: "number", foreground: hex(PALETTE.sealInk) },
-      { token: "delimiter", foreground: hex(PALETTE.ink2) },
-      { token: "identifier", foreground: hex(PALETTE.ink) },
-      { token: "type", foreground: hex(PALETTE.river) },
+      { token: "", foreground: hex(E.fg) },
+      { token: "comment", foreground: hex(E.comment), fontStyle: "italic" },
+      { token: "keyword", foreground: hex(E.keyword), fontStyle: "bold" },
+      { token: "string", foreground: hex(E.string) },
+      { token: "number", foreground: hex(E.number) },
+      { token: "delimiter", foreground: hex(E.delimiter) },
+      { token: "identifier", foreground: hex(E.fg) },
+      { token: "type", foreground: hex(E.type) },
     ],
     colors: {
-      "editor.background": PALETTE.paper3,
-      "editor.foreground": PALETTE.ink,
-      "editorLineNumber.foreground": PALETTE.ink3,
-      "editorLineNumber.activeForeground": PALETTE.ink,
-      "editor.lineHighlightBackground": PALETTE.paper,
+      "editor.background": E.bg,
+      "editor.foreground": E.fg,
+      "editorLineNumber.foreground": E.lineNumber,
+      "editorLineNumber.activeForeground": E.fg,
+      "editor.lineHighlightBackground": E.lineHighlight,
       "editor.lineHighlightBorder": "#00000000",
-      "editor.selectionBackground": `${PALETTE.seal}30`,
-      "editor.inactiveSelectionBackground": `${PALETTE.seal}1a`,
-      "editorCursor.foreground": PALETTE.seal,
-      "editorIndentGuide.background1": PALETTE.paper2,
-      "editorIndentGuide.activeBackground1": PALETTE.rule,
-      "editorBracketMatch.background": PALETTE.paper2,
-      "editorBracketMatch.border": PALETTE.ink3,
-      "editorWidget.background": PALETTE.paper3,
-      "editorWidget.border": PALETTE.ink,
-      "editorSuggestWidget.background": PALETTE.paper3,
-      "editorSuggestWidget.border": PALETTE.ink,
-      "editorSuggestWidget.selectedBackground": PALETTE.paper2,
-      "scrollbarSlider.background": `${PALETTE.rule}80`,
-      "scrollbarSlider.hoverBackground": PALETTE.ruleDark,
+      "editor.selectionBackground": `${E.selection}66`,
+      "editor.inactiveSelectionBackground": `${E.selection}33`,
+      "editorCursor.foreground": E.cursor,
+      "editorIndentGuide.background1": E.border,
+      "editorIndentGuide.activeBackground1": E.lineNumber,
+      "editorBracketMatch.background": E.border,
+      "editorBracketMatch.border": E.comment,
+      "editorWidget.background": E.lineHighlight,
+      "editorWidget.border": E.border,
+      "editorSuggestWidget.background": E.lineHighlight,
+      "editorSuggestWidget.border": E.border,
+      "editorSuggestWidget.selectedBackground": E.border,
+      "scrollbarSlider.background": `${E.lineNumber}66`,
+      "scrollbarSlider.hoverBackground": `${E.lineNumber}aa`,
     },
   });
 };
@@ -66,7 +70,9 @@ const defineWashiTheme: BeforeMount = (monaco) => {
 // Opciones fijas como constantes de módulo: si cambia la identidad del objeto,
 // Monaco llama a updateOptions en cada render (es decir, en cada tecla).
 const BASE_OPTIONS: EditorProps["options"] = {
-  fontSize: 14,
+  fontSize: 15,
+  fontWeight: "500",
+  lineHeight: 22,
   fontFamily: "var(--font-jetbrains), monospace",
   minimap: { enabled: false },
   scrollBeyondLastLine: false,
@@ -78,39 +84,88 @@ const BASE_OPTIONS: EditorProps["options"] = {
   cursorBlinking: "smooth",
   fontLigatures: true,
 };
-const FULL_OPTIONS: EditorProps["options"] = { ...BASE_OPTIONS, scrollbar: { alwaysConsumeMouseWheel: true } };
-const AUTO_HEIGHT_OPTIONS: EditorProps["options"] = { ...BASE_OPTIONS, scrollbar: { alwaysConsumeMouseWheel: false } };
+// Sin menú contextual (su "Pegar" lee el portapapeles directamente) ni arrastrar/soltar.
+const NO_PASTE_OPTIONS: EditorProps["options"] = {
+  contextmenu: false,
+  dragAndDrop: false,
+  dropIntoEditor: { enabled: false },
+};
 
-export function CodeEditor({ value, onChange, onRun, onTest, autoHeight, ariaLabel = "Editor de código Python" }: Props) {
-  // Refs para que los atajos siempre llamen a la versión más reciente de los callbacks.
+export function CodeEditor({
+  value,
+  onChange,
+  onRun,
+  onTest,
+  autoHeight,
+  ariaLabel = "Editor de código Python",
+  allowPaste = true,
+  onPasteBlocked,
+}: Props) {
+  // Refs para que los atajos y listeners siempre usen la versión más reciente de los callbacks.
   const runRef = useRef(onRun);
   const testRef = useRef(onTest);
+  const blockedRef = useRef(onPasteBlocked);
   useEffect(() => {
     runRef.current = onRun;
     testRef.current = onTest;
+    blockedRef.current = onPasteBlocked;
   });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const lines = value.split("\n").length;
   const options = useMemo(
-    () => ({ ...(autoHeight ? AUTO_HEIGHT_OPTIONS : FULL_OPTIONS), ariaLabel }),
-    [autoHeight, ariaLabel],
+    () => ({
+      ...BASE_OPTIONS,
+      scrollbar: { alwaysConsumeMouseWheel: !autoHeight },
+      ...(allowPaste ? {} : NO_PASTE_OPTIONS),
+      ariaLabel,
+    }),
+    [autoHeight, ariaLabel, allowPaste],
   );
+
+  // Bloqueo de pegar: el evento se cancela en fase de captura, antes de que llegue a Monaco.
+  // Cubre Ctrl/Cmd+V, Shift+Insert y "Pegar" del menú del navegador; también soltar texto.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || allowPaste) return;
+    const block = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      blockedRef.current?.();
+    };
+    el.addEventListener("paste", block, true);
+    el.addEventListener("drop", block, true);
+    return () => {
+      el.removeEventListener("paste", block, true);
+      el.removeEventListener("drop", block, true);
+    };
+  }, [allowPaste]);
 
   const handleMount: OnMount = (editor, monaco) => {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => runRef.current?.());
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () =>
       testRef.current?.(),
     );
+    if (!allowPaste) {
+      // Por si Monaco intenta leer el portapapeles por su cuenta con estos atajos.
+      const blocked = () => blockedRef.current?.();
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, blocked);
+      editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Insert, blocked);
+    }
   };
 
   return (
-    <div className="h-full w-full" style={autoHeight ? { height: Math.min(lines, 24) * 20 + 24 } : undefined}>
+    <div
+      ref={containerRef}
+      className="h-full w-full bg-editor"
+      style={autoHeight ? { height: Math.min(lines, 24) * 22 + 24 } : undefined}
+    >
       <Monaco
         language="python"
-        theme="washi"
+        theme="sumi"
         value={value}
         onChange={(v) => onChange(v ?? "")}
-        beforeMount={defineWashiTheme}
+        beforeMount={defineSumiTheme}
         onMount={handleMount}
         options={options}
       />
